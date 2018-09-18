@@ -45,7 +45,6 @@ import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
 import org.jetbrains.kotlin.ir.types.impl.makeTypeProjection
 import org.jetbrains.kotlin.ir.util.DumpIrTreeVisitor
 import org.jetbrains.kotlin.ir.util.defaultType
-import org.jetbrains.kotlin.ir.util.superTypes
 import org.jetbrains.kotlin.name.Name
 import java.io.StringWriter
 
@@ -154,7 +153,16 @@ val IrCall.isSuspend get() = (symbol.owner as? IrSimpleFunction)?.isSuspend == t
 val IrFunctionReference.isSuspend get() = (symbol.owner as? IrSimpleFunction)?.isSuspend == true
 
 
-fun IrValueParameter.copyTo(irFunction: IrFunction, shift: Int = 0): IrValueParameter {
+fun IrValueParameter.copyTo(
+    irFunction: IrFunction,
+    shift: Int = 0,
+    startOffset: Int = this.startOffset,
+    endOffset: Int = this.endOffset,
+    origin: IrDeclarationOrigin = this.origin,
+    name: Name = this.name,
+    type: IrType = this.type.maybeReplace(this.parent as IrTypeParametersContainer, irFunction),
+    varargElementType: IrType? = this.varargElementType
+): IrValueParameter {
     val descriptor = WrappedValueParameterDescriptor(symbol.descriptor.annotations, symbol.descriptor.source)
     val symbol = IrValueParameterSymbolImpl(descriptor)
     return IrValueParameterImpl(
@@ -191,27 +199,6 @@ fun IrFunction.copyParameterDeclarationsFrom(from: IrFunction) {
 
     assert(typeParameters.isEmpty())
     from.typeParameters.mapTo(typeParameters) { it.copyTo(this) }
-}
-
-fun IrValueParameter.copy(
-    function: IrFunction,
-    origin: IrDeclarationOrigin,
-    index: Int,
-    name: Name,
-    type: IrType,
-    varargElementType: IrType? = null
-): IrValueParameter {
-    val descriptor = WrappedValueParameterDescriptor()
-    return IrValueParameterImpl(
-        UNDEFINED_OFFSET, UNDEFINED_OFFSET,
-        origin,
-        IrValueParameterSymbolImpl(descriptor),
-        name, index,
-        type, varargElementType, isCrossinline, isNoinline
-    ).apply {
-        descriptor.bind(this)
-        parent = function
-    }
 }
 
 fun IrTypeParametersContainer.copyTypeParametersFrom(
@@ -252,38 +239,33 @@ fun IrFunction.copyValueParametersToStatic(
     val target = this
     assert(target.valueParameters.isEmpty())
 
-    var offset = 0
+    var shift = 0
     source.dispatchReceiverParameter?.apply {
         target.valueParameters.add(
-            copy(
+            copyTo(
                 target,
-                origin,
-                offset++,
-                Name.identifier("\$this"),
-                type.maybeReplace(source, target)
+                origin = origin,
+                shift = shift++,
+                name = Name.identifier("\$this")
             )
         )
     }
     source.extensionReceiverParameter?.apply {
         target.valueParameters.add(
-            copy(
+            copyTo(
                 target,
-                origin,
-                offset++,
-                Name.identifier("\$receiver"),
-                type.maybeReplace(source, target)
+                origin = origin,
+                shift = shift++,
+                name = Name.identifier("\$receiver")
             )
         )
     }
     source.valueParameters.forEachIndexed { i, oldValueParameter ->
         target.valueParameters.add(
-            oldValueParameter.copy(
+            oldValueParameter.copyTo(
                 target,
-                origin,
-                offset + i,
-                oldValueParameter.name,
-                oldValueParameter.type.maybeReplace(source, target),
-                oldValueParameter.varargElementType?.maybeReplace(source, target)
+                origin = origin,
+                shift = shift
             )
         )
     }

@@ -1,6 +1,4 @@
 // TARGET_BACKEND: JVM
-// IGNORE_BACKEND: JS, JS_IR, NATIVE
-// WITH_RUNTIME
 
 // FILE: A.kt
 package a

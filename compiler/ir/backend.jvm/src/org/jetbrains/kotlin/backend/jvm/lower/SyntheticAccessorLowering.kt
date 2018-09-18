@@ -125,6 +125,7 @@ class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTrans
                 isNoinline = false
             ).apply {
                 markerParameterDescriptor.bind(this)
+                parent = accessor
             }
             accessor.valueParameters.add(markerParameter)
 
@@ -217,6 +218,7 @@ class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTrans
                         isNoinline = false
                     ).apply {
                         receiverDescriptor.bind(this)
+                        parent = accessor
                     }
                 )
             }
@@ -275,6 +277,7 @@ class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTrans
                         isNoinline = false
                     ).apply {
                         receiverDescriptor.bind(this)
+                        parent = accessor
                     }
                 )
             }
@@ -292,6 +295,7 @@ class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTrans
                     isNoinline = false
                 ).apply {
                     valueDescriptor.bind(this)
+                    parent = accessor
                 }
             )
 
@@ -458,7 +462,7 @@ class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTrans
         if (declaration is IrFunction && declaration.isInline) return true
 
         // The only two visibilities where Kotlin rules differ from JVM rules.
-        if (declaration.visibility != Visibilities.PRIVATE && declaration.visibility != Visibilities.PROTECTED) return true
+        if (!Visibilities.isPrivate(declaration.visibility) && declaration.visibility != Visibilities.PROTECTED) return true
 
         val symbolDeclarationContainer = (declaration.parent as? IrDeclarationContainer) as? IrElement
         // If local variables are accessible by Kotlin rules, they also are by Java rules.
@@ -472,7 +476,7 @@ class SyntheticAccessorLowering(val context: JvmBackendContext) : IrElementTrans
 
         val samePackage = declaration.getPackageFragment()?.fqName == contextDeclarationContainer?.getPackageFragment()?.fqName
         return when {
-            declaration.visibility == Visibilities.PRIVATE && symbolDeclarationContainer != contextDeclarationContainer -> false
+            Visibilities.isPrivate(declaration.visibility) && symbolDeclarationContainer != contextDeclarationContainer -> false
             (declaration.visibility == Visibilities.PROTECTED && !samePackage &&
                     !(symbolDeclarationContainer is IrClass && contextDeclarationContainer is IrClass &&
                             contextDeclarationContainer.isSubclassOf(symbolDeclarationContainer))) -> false
