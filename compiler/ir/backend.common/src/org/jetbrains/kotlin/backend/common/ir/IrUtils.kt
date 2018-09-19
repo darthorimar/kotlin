@@ -23,7 +23,6 @@ import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.descriptors.impl.ClassConstructorDescriptorImpl
 import org.jetbrains.kotlin.ir.IrElement
-import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrConstructorImpl
 import org.jetbrains.kotlin.ir.declarations.impl.IrTypeParameterImpl
@@ -174,13 +173,20 @@ fun IrValueParameter.copyTo(
     }
 }
 
-fun IrTypeParameter.copyTo(irFunction: IrFunction, shift: Int = 0): IrTypeParameter {
-    // TODO: Copy IrTypeParameter with type remapping
+fun IrTypeParameter.copyTo(
+    target: IrTypeParametersContainer,
+    shift: Int = 0,
+    origin: IrDeclarationOrigin = this.origin
+): IrTypeParameter {
+    val source = parent as IrTypeParametersContainer
     val descriptor = WrappedTypeParameterDescriptor(symbol.descriptor.annotations, symbol.descriptor.source)
     val symbol = IrTypeParameterSymbolImpl(descriptor)
-    return IrTypeParameterImpl(startOffset, endOffset, origin, symbol, name, shift + index, isReified, variance).also {
-        descriptor.bind(it)
-        it.parent = irFunction
+    return IrTypeParameterImpl(startOffset, endOffset, origin, symbol, name, shift + index, isReified, variance).also { copied ->
+        descriptor.bind(copied)
+        copied.parent = target
+        superTypes.forEach {
+            copied.superTypes.add(it.maybeReplace(source, target))
+        }
     }
 }
 
@@ -203,32 +209,13 @@ fun IrFunction.copyParameterDeclarationsFrom(from: IrFunction) {
 
 fun IrTypeParametersContainer.copyTypeParametersFrom(
     source: IrTypeParametersContainer,
-    origin: IrDeclarationOrigin
+    origin: IrDeclarationOrigin? = null
 ) {
     val target = this
     assert(target.typeParameters.isEmpty())
     source.typeParameters.forEachIndexed { i, sourceParameter ->
         assert(sourceParameter.index == i)
-        val tpDescriptor = WrappedTypeParameterDescriptor()
-        target.typeParameters.add(
-            IrTypeParameterImpl(
-                UNDEFINED_OFFSET,
-                UNDEFINED_OFFSET,
-                origin,
-                IrTypeParameterSymbolImpl(tpDescriptor),
-                sourceParameter.name,
-                sourceParameter.index,
-                sourceParameter.isReified,
-                sourceParameter.variance
-            ).apply {
-                tpDescriptor.bind(this)
-                parent = target
-                sourceParameter.superTypes.forEach {
-                    // Using the already copied portion of target.typeParameters.
-                    superTypes.add(it.maybeReplace(source, target))
-                }
-            }
-        )
+        target.typeParameters.add(sourceParameter.copyTo(target, origin = origin ?: sourceParameter.origin))
     }
 }
 
@@ -302,3 +289,4 @@ fun IrType.maybeReplace(source: IrTypeParametersContainer, target: IrTypeParamet
         }
         else -> this
     }
+
