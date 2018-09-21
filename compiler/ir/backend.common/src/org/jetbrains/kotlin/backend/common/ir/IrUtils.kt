@@ -173,7 +173,7 @@ fun IrValueParameter.copyTo(
     }
 }
 
-fun IrTypeParameter.copyTo(
+fun IrTypeParameter.copyToWithoutSuperTypes(
     target: IrTypeParametersContainer,
     shift: Int = 0,
     origin: IrDeclarationOrigin = this.origin
@@ -184,13 +184,12 @@ fun IrTypeParameter.copyTo(
     return IrTypeParameterImpl(startOffset, endOffset, origin, symbol, name, shift + index, isReified, variance).also { copied ->
         descriptor.bind(copied)
         copied.parent = target
-        superTypes.forEach {
-            copied.superTypes.add(it.maybeReplace(source, target))
-        }
     }
 }
 
 fun IrFunction.copyParameterDeclarationsFrom(from: IrFunction) {
+    assert(typeParameters.isEmpty())
+    copyTypeParametersFrom(from)
 
     // TODO: should dispatch receiver be copied?
     dispatchReceiverParameter = from.dispatchReceiverParameter?.let {
@@ -202,9 +201,6 @@ fun IrFunction.copyParameterDeclarationsFrom(from: IrFunction) {
 
     val shift = valueParameters.size
     valueParameters += from.valueParameters.map { it.copyTo(this, shift) }
-
-    assert(typeParameters.isEmpty())
-    from.typeParameters.mapTo(typeParameters) { it.copyTo(this) }
 }
 
 fun IrTypeParametersContainer.copyTypeParametersFrom(
@@ -212,10 +208,25 @@ fun IrTypeParametersContainer.copyTypeParametersFrom(
     origin: IrDeclarationOrigin? = null
 ) {
     val target = this
-    assert(target.typeParameters.isEmpty())
+    val shift = target.typeParameters.size
+    // Any type parameter can figure in a boundary type for any other parameter.
+    // Therefore, we first copy the parameters themselves, then set up their supertypes.
     source.typeParameters.forEachIndexed { i, sourceParameter ->
         assert(sourceParameter.index == i)
-        target.typeParameters.add(sourceParameter.copyTo(target, origin = origin ?: sourceParameter.origin))
+        target.typeParameters.add(sourceParameter.copyToWithoutSuperTypes(target, shift = shift, origin = origin ?: sourceParameter.origin))
+    }
+    source.typeParameters.zip(target.typeParameters.drop(shift)).forEach { (srcParameter, dstParameter) ->
+        dstParameter.copySuperTypesFrom(srcParameter)
+    }
+}
+
+private fun IrTypeParameter.copySuperTypesFrom(source: IrTypeParameter) {
+    val target = this
+    val sourceParent = source.parent as IrTypeParametersContainer
+    val targetParent = target.parent as IrTypeParametersContainer
+    val shift = target.index - source.index
+    source.superTypes.forEach {
+        target.superTypes.add(it.maybeReplace(sourceParent, targetParent, shift))
     }
 }
 
@@ -262,13 +273,13 @@ fun IrFunction.copyValueParametersToStatic(
     Type parameters should correspond to the function where they are defined.
     `source` is where the type is originally taken from.
  */
-fun IrType.maybeReplace(source: IrTypeParametersContainer, target: IrTypeParametersContainer): IrType =
+fun IrType.maybeReplace(source: IrTypeParametersContainer, target: IrTypeParametersContainer, shift: Int = 0): IrType =
     when (this) {
         is IrSimpleType -> {
             val classifier = classifier.owner
             when {
                 classifier is IrTypeParameter && classifier.parent == source ->
-                    target.typeParameters[classifier.index].defaultType
+                    target.typeParameters[classifier.index + shift].defaultType
                 classifier is IrClass ->
                     IrSimpleTypeImpl(
                         classifier.symbol,
@@ -276,7 +287,7 @@ fun IrType.maybeReplace(source: IrTypeParametersContainer, target: IrTypeParamet
                         arguments.map {
                             when (it) {
                                 is IrTypeProjection -> makeTypeProjection(
-                                    it.type.maybeReplace(source, target),
+                                    it.type.maybeReplace(source, target, shift),
                                     it.variance
                                 )
                                 else -> it
