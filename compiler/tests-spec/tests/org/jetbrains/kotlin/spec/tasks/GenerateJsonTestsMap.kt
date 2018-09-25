@@ -6,7 +6,7 @@
 package org.jetbrains.kotlin.spec.tasks
 
 import com.google.gson.JsonObject
-import org.jetbrains.kotlin.spec.TestsJsonMapBuilder
+import org.jetbrains.kotlin.spec.utils.TestsJsonMapBuilder
 import org.jetbrains.kotlin.spec.validators.LinkedSpecTestValidator
 import org.jetbrains.kotlin.spec.validators.SpecTestValidationException
 import java.io.File
