@@ -26,16 +26,34 @@ import org.jetbrains.org.objectweb.asm.tree.analysis.SourceInterpreter
  *
  * Replace CHECKCAST Unit whit ARETURN iff
  * It is successed by ARETURN and it casts Unit
+ *
+ * Also, move ARETURN closer to GETSTATIC kotlin/Unit
  */
 object ReturnUnitMethodTransformer : MethodTransformer() {
     override fun transform(internalClassName: String, methodNode: MethodNode) {
         val unitMarks = findReturnsUnitMarks(methodNode)
         if (unitMarks.isEmpty()) return
 
+        addAreturnToUnits(methodNode)
+
         replaceCheckcastUnitWithAreturn(methodNode, internalClassName)
         replacePopWithAreturn(methodNode, internalClassName)
 
         cleanUpReturnsUnitMarkers(methodNode, unitMarks)
+    }
+
+    // Move ARETURN closer to GETSTATIC kotlin/Unit to enable tail-call optimization if there are several ways to ARETURN and some
+    // of the ways come from non-suspension point
+    private fun addAreturnToUnits(methodNode: MethodNode) {
+        val returnUnitSequences = findReturnUnitSequences(methodNode)
+        val unitsWithoutAreturn =
+            methodNode.instructions.asSequence().filter { it.isUnitInstance() }.filterNot { it in returnUnitSequences }.toList()
+        val safeUnits = findSuccessors(methodNode, unitsWithoutAreturn)
+            .filter { (_, succs) -> succs.all { it.opcode == Opcodes.ARETURN } }
+            .keys
+        for (unit in safeUnits) {
+            methodNode.instructions.insert(unit, InsnNode(Opcodes.ARETURN))
+        }
     }
 
     private fun replacePopWithAreturn(
