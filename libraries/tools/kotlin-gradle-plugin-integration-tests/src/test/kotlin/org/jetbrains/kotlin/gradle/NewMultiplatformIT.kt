@@ -671,25 +671,48 @@ class NewMultiplatformIT : BaseGradleIT() {
             ":linkReleaseStatic$taskSuffix"
         )
 
+        val frameworkPrefix = CompilerOutputKind.FRAMEWORK.prefix(HostManager.host)
+        val frameworkSuffix = CompilerOutputKind.FRAMEWORK.suffix(HostManager.host)
+        val frameworkPaths = listOf(
+            "build/bin/$nativeHostTargetName/main/debug/framework/$frameworkPrefix$baseName$frameworkSuffix",
+            "build/bin/$nativeHostTargetName/main/release/framework/$frameworkPrefix$baseName$frameworkSuffix"
+        )
+            .takeIf { HostManager.hostIsMac }
+            .orEmpty()
+
+        val frameworkTasks = listOf(":linkDebugFramework$taskSuffix", ":linkReleaseFramework$taskSuffix")
+            .takeIf { HostManager.hostIsMac }
+            .orEmpty()
+
         build("assemble") {
             assertSuccessful()
 
             sharedPaths.forEach { assertFileExists(it) }
             staticPaths.forEach { assertFileExists(it) }
             headerPaths.forEach { assertFileExists(it) }
+            frameworkPaths.forEach { assertFileExists(it) }
         }
 
         build("assemble") {
             assertSuccessful()
             assertTasksUpToDate(linkTasks)
+            assertTasksUpToDate(frameworkTasks)
         }
 
         assertTrue(projectDir.resolve(headerPaths[0]).delete())
+        if (HostManager.hostIsMac) {
+            assertTrue(projectDir.resolve(frameworkPaths[0]).deleteRecursively())
+        }
 
         build("assemble") {
             assertSuccessful()
             assertTasksUpToDate(linkTasks.drop(1))
             assertTasksExecuted(linkTasks[0])
+
+            if (HostManager.hostIsMac) {
+                assertTasksUpToDate(frameworkTasks.drop(1))
+                assertTasksExecuted(frameworkTasks[0])
+            }
         }
     }
 

@@ -88,7 +88,7 @@ open class KotlinNativeCompile : AbstractCompile() {
         @Suppress("LeakingThis")
         setDestinationDir(project.provider {
             val output = outputFile.get()
-            if (output.isDirectory) output else output.parentFile
+            if (outputKind == CompilerOutputKind.FRAMEWORK) output else output.parentFile
         })
 
         sourceCompatibility = "1.6"
