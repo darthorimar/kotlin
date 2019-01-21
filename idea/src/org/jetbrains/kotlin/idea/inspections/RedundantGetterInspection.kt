@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.idea.inspections
 import com.intellij.codeInspection.*
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElementVisitor
+import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.*
 
 class RedundantGetterInspection : AbstractKotlinInspection(), CleanupLocalInspectionTool {
@@ -26,6 +27,7 @@ class RedundantGetterInspection : AbstractKotlinInspection(), CleanupLocalInspec
 private fun KtPropertyAccessor.isRedundantGetter(): Boolean {
     if (!isGetter) return false
     if (annotationEntries.isNotEmpty()) return false
+    if (hasModifier(KtTokens.EXTERNAL_KEYWORD)) return false
     val expression = bodyExpression ?: return true
     if (expression is KtNameReferenceExpression) {
         return expression.isFieldText()
