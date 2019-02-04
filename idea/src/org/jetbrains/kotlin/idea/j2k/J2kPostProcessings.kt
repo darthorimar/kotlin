@@ -16,24 +16,15 @@
 
 package org.jetbrains.kotlin.idea.j2k
 
-import com.intellij.codeInsight.actions.OptimizeImportsProcessor
-import com.intellij.codeInspection.*
-import com.intellij.codeInspection.ex.LocalInspectionToolWrapper
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.project.Project
-import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.PsiElement
+import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
-import org.jetbrains.kotlin.descriptors.CallableDescriptor
-import org.jetbrains.kotlin.descriptors.PropertyDescriptor
 import org.jetbrains.kotlin.diagnostics.Diagnostic
 import org.jetbrains.kotlin.diagnostics.DiagnosticFactory
 import org.jetbrains.kotlin.diagnostics.Errors
-import org.jetbrains.kotlin.idea.analysis.analyzeInContext
 import org.jetbrains.kotlin.idea.caches.resolve.analyze
-import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
+import org.jetbrains.kotlin.idea.core.moveFunctionLiteralOutsideParenthesesIfPossible
 import org.jetbrains.kotlin.idea.core.replaced
 import org.jetbrains.kotlin.idea.core.setVisibility
 import org.jetbrains.kotlin.idea.inspections.*
@@ -44,60 +35,37 @@ import org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.F
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.FoldIfToReturnIntention
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.intentions.IfThenToElvisIntention
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.isTrivialStatementBody
-import org.jetbrains.kotlin.idea.quickfix.ChangeVariableMutabilityFix
-import org.jetbrains.kotlin.idea.quickfix.QuickFixActionBase
 import org.jetbrains.kotlin.idea.quickfix.RemoveModifierFix
 import org.jetbrains.kotlin.idea.quickfix.RemoveUselessCastFix
 import org.jetbrains.kotlin.idea.references.mainReference
-import org.jetbrains.kotlin.idea.util.getResolutionScope
-import org.jetbrains.kotlin.j2k.ConversionContext
-import org.jetbrains.kotlin.j2k.ConverterSettings
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.*
-import org.jetbrains.kotlin.psi.psiUtil.*
+import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
+import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
+import org.jetbrains.kotlin.psi.psiUtil.isAncestor
+import org.jetbrains.kotlin.psi.psiUtil.visibilityModifierType
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.callUtil.getType
 import org.jetbrains.kotlin.resolve.diagnostics.Diagnostics
 import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode
-import org.jetbrains.kotlin.types.isNullable
-import org.jetbrains.kotlin.types.typeUtil.makeNotNullable
 import org.jetbrains.kotlin.utils.mapToIndex
 import java.util.*
 
-interface Processing
-data class SingleProcessing(val processing: J2kPostProcessing) : Processing
-data class ProcessingGroup(val processings: List<Processing>) : Processing {
-    constructor(vararg processings: Processing) : this(processings.toList())
-}
-
 interface J2kPostProcessing {
-    fun createAction(element: KtElement, diagnostics: Diagnostics, settings: ConverterSettings?): (() -> Unit)? =
-        createAction(element, diagnostics)
-
-    fun createAction(element: KtElement, diagnostics: Diagnostics): (() -> Unit)? =
-        createAction(element, diagnostics, null)
+    fun createAction(element: KtElement, diagnostics: Diagnostics): (() -> Unit)?
 
     val writeActionNeeded: Boolean
 }
 
-interface J2KPostProcessingRegistrar {
-    val processings: Collection<J2kPostProcessing>
-    val mainProcessings: ProcessingGroup
-    fun priority(processing: J2kPostProcessing): Int
-}
-
-object J2KPostProcessingRegistrarImpl : J2KPostProcessingRegistrar {
-    override val mainProcessings: ProcessingGroup
-        get() = ProcessingGroup(_processings.map { SingleProcessing(it) })
-
+object J2KPostProcessingRegistrar {
     private val _processings = ArrayList<J2kPostProcessing>()
 
-    override val processings: Collection<J2kPostProcessing>
+    val processings: Collection<J2kPostProcessing>
         get() = _processings
 
     private val processingsToPriorityMap = HashMap<J2kPostProcessing, Int>()
 
-    override fun priority(processing: J2kPostProcessing): Int = processingsToPriorityMap[processing]!!
+    fun priority(processing: J2kPostProcessing): Int = processingsToPriorityMap[processing]!!
 
     init {
         _processings.add(RemoveExplicitTypeArgumentsProcessing())

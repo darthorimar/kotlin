@@ -1146,7 +1146,7 @@ internal fun <D : KtNamedDeclaration> placeDeclarationInContainer(
     return declarationInPlace
 }
 
-internal fun KtNamedDeclaration.getReturnTypeReference() = getReturnTypeReferences().singleOrNull()
+fun KtNamedDeclaration.getReturnTypeReference() = getReturnTypeReferences().singleOrNull()
 
 internal fun KtNamedDeclaration.getReturnTypeReferences(): List<KtTypeReference> {
     return when (this) {
