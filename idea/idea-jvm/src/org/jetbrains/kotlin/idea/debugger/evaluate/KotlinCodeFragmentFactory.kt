@@ -45,7 +45,7 @@ import org.jetbrains.kotlin.asJava.classes.KtLightClass
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.idea.codeInsight.CodeInsightUtils
 import org.jetbrains.kotlin.idea.debugger.KotlinEditorTextProvider
-import org.jetbrains.kotlin.idea.j2k.J2kPostProcessor
+import org.jetbrains.kotlin.idea.j2k.JavaToKotlinConverterFactory
 import org.jetbrains.kotlin.idea.refactoring.j2k
 import org.jetbrains.kotlin.idea.refactoring.j2kText
 import org.jetbrains.kotlin.idea.util.IdeDescriptorRenderers
@@ -257,7 +257,7 @@ class KotlinCodeFragmentFactory : CodeFragmentFactory() {
                                 kotlinCodeFragment.context
                             )
 
-                            AfterConversionPass(project, J2kPostProcessor(formatCode = false)).run(convertedFragment!!, range = null)
+                            AfterConversionPass(project, JavaToKotlinConverterFactory.createPostProcessor(formatCode = false)).run(convertedFragment!!, range = null)
                         }
                     } catch (e: Throwable) {
                         // ignored because text can be invalid
