@@ -50,11 +50,14 @@ class ArrayInitializerConversion(private val context: ConversionContext) : Recur
                 JKJavaNewExpressionImpl(
                     context.symbolProvider.provideByFqName(type.arrayFqName()),
                     JKArgumentListImpl(dimensions[0]),
-                    JKTypeArgumentListImpl(emptyList())
+                    JKTypeArgumentListImpl(listOf(JKTypeElementImpl(type)))
                 )
             }
         }
         if (dimensions[1] !is JKStubExpression) {
+            val arrayType = dimensions.drop(1).fold(type) { currentType, _ ->
+                JKJavaArrayTypeImpl(currentType)
+            }
             return JKJavaMethodCallExpressionImpl(
                 context.symbolProvider.provideByFqName("kotlin.Array"),
                 JKArgumentListImpl(
@@ -63,7 +66,8 @@ class ArrayInitializerConversion(private val context: ConversionContext) : Recur
                         JKExpressionStatementImpl(buildArrayInitializer(dimensions.subList(1, dimensions.size), type)),
                         emptyList()
                     )
-                )
+                ),
+                JKTypeArgumentListImpl(listOf(JKTypeElementImpl(arrayType)))
             )
         }
         var resultType = JKClassTypeImpl(
