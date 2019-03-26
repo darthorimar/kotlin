@@ -50,7 +50,7 @@ class ArrayInitializerConversion(private val context: ConversionContext) : Recur
                 JKJavaNewExpressionImpl(
                     context.symbolProvider.provideByFqName(type.arrayFqName()),
                     JKArgumentListImpl(dimensions[0]),
-                    JKTypeArgumentListImpl(listOf(JKTypeElementImpl(type)))
+                    JKTypeArgumentListImpl(emptyList())
                 )
             }
         }
