@@ -291,6 +291,13 @@ interface JKNameIdentifier : JKIdentifier {
 
 interface JKExpression : JKTreeElement, JKAnnotationMemberValue
 
+interface JKMethodReferenceExpression : JKExpression, PsiOwner {
+    val qualifier: JKExpression
+    val identifier: JKNamedSymbol
+    val functionalType: JKTypeElement
+    val isConstructorCall: Boolean
+}
+
 abstract class JKExpressionStatement : JKStatement() {
     abstract val expression: JKExpression
 }
@@ -357,7 +364,7 @@ interface JKParenthesizedExpression : JKExpression {
     val expression: JKExpression
 }
 
-interface JKTypeCastExpression : JKExpression {
+interface   JKTypeCastExpression : JKExpression {
     val expression: JKExpression
     val type: JKTypeElement
 }

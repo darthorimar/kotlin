@@ -67,7 +67,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("annotationInterface3.java")
-        public void ignoreTestAnnotationInterface3() throws Exception {
+        public void testAnnotationInterface3() throws Exception {
             runTest("nj2k/testData/newJ2k/annotations/annotationInterface3.java");
         }
 
@@ -107,7 +107,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("jetbrainsNullable.java")
-        public void ignoreTestJetbrainsNullable() throws Exception {
+        public void testJetbrainsNullable() throws Exception {
             runTest("nj2k/testData/newJ2k/annotations/jetbrainsNullable.java");
         }
 
@@ -150,7 +150,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("oneStaticAnonBlock.java")
-        public void ignoreTestOneStaticAnonBlock() throws Exception {
+        public void testOneStaticAnonBlock() throws Exception {
             runTest("nj2k/testData/newJ2k/anonymousBlock/oneStaticAnonBlock.java");
         }
     }
@@ -632,7 +632,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("Boxing.java")
-        public void ignoreTestBoxing() throws Exception {
+        public void testBoxing() throws Exception {
             runTest("nj2k/testData/newJ2k/boxedType/Boxing.java");
         }
 
@@ -662,7 +662,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("kt-671.java")
-        public void ignoreTestKt_671() throws Exception {
+        public void testKt_671() throws Exception {
             runTest("nj2k/testData/newJ2k/boxedType/kt-671.java");
         }
 
@@ -982,7 +982,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("commentInsideCall.java")
-        public void ignoreTestCommentInsideCall() throws Exception {
+        public void testCommentInsideCall() throws Exception {
             runTest("nj2k/testData/newJ2k/comments/commentInsideCall.java");
         }
 
@@ -997,7 +997,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("commentsForConstructors.java")
-        public void ignoreTestCommentsForConstructors() throws Exception {
+        public void testCommentsForConstructors() throws Exception {
             runTest("nj2k/testData/newJ2k/comments/commentsForConstructors.java");
         }
 
@@ -1012,7 +1012,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("removeNoInspectionComment.java")
-        public void ignoreTestRemoveNoInspectionComment() throws Exception {
+        public void testRemoveNoInspectionComment() throws Exception {
             runTest("nj2k/testData/newJ2k/comments/removeNoInspectionComment.java");
         }
     }
@@ -1128,7 +1128,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("fieldsInitializedFromParamsAnnotations.java")
-        public void ignoreTestFieldsInitializedFromParamsAnnotations() throws Exception {
+        public void testFieldsInitializedFromParamsAnnotations() throws Exception {
             runTest("nj2k/testData/newJ2k/constructors/fieldsInitializedFromParamsAnnotations.java");
         }
 
@@ -1372,7 +1372,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("Comments.java")
-        public void ignoreTestComments() throws Exception {
+        public void testComments() throws Exception {
             runTest("nj2k/testData/newJ2k/detectProperties/Comments.java");
         }
 
@@ -1497,7 +1497,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("IsPrefix.java")
-        public void ignoreTestIsPrefix() throws Exception {
+        public void testIsPrefix() throws Exception {
             runTest("nj2k/testData/newJ2k/detectProperties/IsPrefix.java");
         }
 
@@ -1512,12 +1512,12 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("Overrides.java")
-        public void ignoreTestOverrides() throws Exception {
+        public void testOverrides() throws Exception {
             runTest("nj2k/testData/newJ2k/detectProperties/Overrides.java");
         }
 
         @TestMetadata("OverridesOfExternalCode.java")
-        public void ignoreTestOverridesOfExternalCode() throws Exception {
+        public void testOverridesOfExternalCode() throws Exception {
             runTest("nj2k/testData/newJ2k/detectProperties/OverridesOfExternalCode.java");
         }
 
@@ -1547,7 +1547,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("SetterWithSideEffect3.java")
-        public void ignoreTestSetterWithSideEffect3() throws Exception {
+        public void testSetterWithSideEffect3() throws Exception {
             runTest("nj2k/testData/newJ2k/detectProperties/SetterWithSideEffect3.java");
         }
 
@@ -1731,7 +1731,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("enumConstantIsNotNull.java")
-        public void ignoreTestEnumConstantIsNotNull() throws Exception {
+        public void testEnumConstantIsNotNull() throws Exception {
             runTest("nj2k/testData/newJ2k/enum/enumConstantIsNotNull.java");
         }
 
@@ -1892,7 +1892,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("valOrVar.java")
-        public void ignoreTestValOrVar() throws Exception {
+        public void testValOrVar() throws Exception {
             runTest("nj2k/testData/newJ2k/field/valOrVar.java");
         }
 
@@ -2221,7 +2221,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("nonStaticMembersWithComments.java")
-        public void ignoreTestNonStaticMembersWithComments() throws Exception {
+        public void testNonStaticMembersWithComments() throws Exception {
             runTest("nj2k/testData/newJ2k/formatting/nonStaticMembersWithComments.java");
         }
 
@@ -2231,7 +2231,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("staticAndNonStaticMembersWithComments.java")
-        public void ignoreTestStaticAndNonStaticMembersWithComments() throws Exception {
+        public void testStaticAndNonStaticMembersWithComments() throws Exception {
             runTest("nj2k/testData/newJ2k/formatting/staticAndNonStaticMembersWithComments.java");
         }
 
@@ -2250,7 +2250,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("abstractMethod.java")
-        public void ignoreTestAbstractMethod() throws Exception {
+        public void testAbstractMethod() throws Exception {
             runTest("nj2k/testData/newJ2k/function/abstractMethod.java");
         }
 
@@ -2269,7 +2269,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("extendsBaseWhichExtendsObject.java")
-        public void ignoreTestExtendsBaseWhichExtendsObject() throws Exception {
+        public void testExtendsBaseWhichExtendsObject() throws Exception {
             runTest("nj2k/testData/newJ2k/function/extendsBaseWhichExtendsObject.java");
         }
 
@@ -2289,17 +2289,17 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("java8Lambdas.java")
-        public void ignoreTestJava8Lambdas() throws Exception {
+        public void testJava8Lambdas() throws Exception {
             runTest("nj2k/testData/newJ2k/function/java8Lambdas.java");
         }
 
         @TestMetadata("java8MRKFunctionExpectedType.java")
-        public void ignoreTestJava8MRKFunctionExpectedType() throws Exception {
+        public void testJava8MRKFunctionExpectedType() throws Exception {
             runTest("nj2k/testData/newJ2k/function/java8MRKFunctionExpectedType.java");
         }
 
         @TestMetadata("java8MRSamConstructor.java")
-        public void ignoreTestJava8MRSamConstructor() throws Exception {
+        public void testJava8MRSamConstructor() throws Exception {
             runTest("nj2k/testData/newJ2k/function/java8MRSamConstructor.java");
         }
 
@@ -2344,7 +2344,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("nativeMethods.java")
-        public void ignoreTestNativeMethods() throws Exception {
+        public void testNativeMethods() throws Exception {
             runTest("nj2k/testData/newJ2k/function/nativeMethods.java");
         }
 
@@ -2424,7 +2424,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("varVararg.java")
-        public void ignoreTestVarVararg() throws Exception {
+        public void testVarVararg() throws Exception {
             runTest("nj2k/testData/newJ2k/function/varVararg.java");
         }
     }
@@ -2632,7 +2632,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("comments.java")
-        public void ignoreTestComments() throws Exception {
+        public void testComments() throws Exception {
             runTest("nj2k/testData/newJ2k/issues/comments.java");
         }
 
@@ -2647,7 +2647,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("kt-1048.java")
-        public void ignoreTestKt_1048() throws Exception {
+        public void testKt_1048() throws Exception {
             runTest("nj2k/testData/newJ2k/issues/kt-1048.java");
         }
 
@@ -2717,7 +2717,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("kt-792.java")
-        public void ignoreTestKt_792() throws Exception {
+        public void testKt_792() throws Exception {
             runTest("nj2k/testData/newJ2k/issues/kt-792.java");
         }
 
@@ -2727,7 +2727,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("kt-794.java")
-        public void ignoreTestKt_794() throws Exception {
+        public void testKt_794() throws Exception {
             runTest("nj2k/testData/newJ2k/issues/kt-794.java");
         }
 
@@ -2847,7 +2847,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("unfinishedReferenceExpression.java")
-        public void ignoreTestUnfinishedReferenceExpression() throws Exception {
+        public void testUnfinishedReferenceExpression() throws Exception {
             runTest("nj2k/testData/newJ2k/issues/unfinishedReferenceExpression.java");
         }
     }
@@ -3074,7 +3074,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("octal.java")
-        public void ignoreTestOctal() throws Exception {
+        public void testOctal() throws Exception {
             runTest("nj2k/testData/newJ2k/literalExpression/octal.java");
         }
 
@@ -3205,7 +3205,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("stringMethods.java")
-        public void ignoreTestStringMethods() throws Exception {
+        public void testStringMethods() throws Exception {
             runTest("nj2k/testData/newJ2k/methodCallExpression/stringMethods.java");
         }
 
@@ -3311,7 +3311,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("Overrides.java")
-        public void ignoreTestOverrides() throws Exception {
+        public void testOverrides() throws Exception {
             runTest("nj2k/testData/newJ2k/mutableCollections/Overrides.java");
         }
 
@@ -3502,7 +3502,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("MethodResultInitializesNullableField.java")
-        public void ignoreTestMethodResultInitializesNullableField() throws Exception {
+        public void testMethodResultInitializesNullableField() throws Exception {
             runTest("nj2k/testData/newJ2k/nullability/MethodResultInitializesNullableField.java");
         }
 
@@ -3577,7 +3577,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("Overrides.java")
-        public void ignoreTestOverrides() throws Exception {
+        public void testOverrides() throws Exception {
             runTest("nj2k/testData/newJ2k/nullability/Overrides.java");
         }
 
@@ -3639,7 +3639,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("AccessorToDrop.java")
-        public void ignoreTestAccessorToDrop() throws Exception {
+        public void testAccessorToDrop() throws Exception {
             runTest("nj2k/testData/newJ2k/overloads/AccessorToDrop.java");
         }
 
@@ -3780,12 +3780,12 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("IfNullReturnToElvis.java")
-        public void ignoreTestIfNullReturnToElvis() throws Exception {
+        public void testIfNullReturnToElvis() throws Exception {
             runTest("nj2k/testData/newJ2k/postProcessing/IfNullReturnToElvis.java");
         }
 
         @TestMetadata("IfToElvis.java")
-        public void ignoreTestIfToElvis() throws Exception {
+        public void testIfToElvis() throws Exception {
             runTest("nj2k/testData/newJ2k/postProcessing/IfToElvis.java");
         }
 
@@ -3795,7 +3795,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("java8MapForEachWithFullJdk.java")
-        public void ignoreTestJava8MapForEachWithFullJdk() throws Exception {
+        public void testJava8MapForEachWithFullJdk() throws Exception {
             runTest("j2k/testData/fileOrElement/postProcessing/java8MapForEachWithFullJdk.java");
         }
 
@@ -3985,7 +3985,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("rawGenericMethod.java")
-        public void ignoreTestRawGenericMethod() throws Exception {
+        public void testRawGenericMethod() throws Exception {
             runTest("nj2k/testData/newJ2k/rawGenerics/rawGenericMethod.java");
         }
     }
@@ -4320,7 +4320,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("toArray.java")
-        public void ignoreTestToArray() throws Exception {
+        public void testToArray() throws Exception {
             runTest("nj2k/testData/newJ2k/toArray/toArray.java");
         }
     }
@@ -4668,7 +4668,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("rawTypeCast.java")
-        public void ignoreTestRawTypeCast() throws Exception {
+        public void testRawTypeCast() throws Exception {
             runTest("nj2k/testData/newJ2k/typeParameters/rawTypeCast.java");
         }
 
@@ -4678,7 +4678,7 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
 
         @TestMetadata("typeFromOtherFile.java")
-        public void ignoreTestTypeFromOtherFile() throws Exception {
+        public void testTypeFromOtherFile() throws Exception {
             runTest("nj2k/testData/newJ2k/typeParameters/typeFromOtherFile.java");
         }
 

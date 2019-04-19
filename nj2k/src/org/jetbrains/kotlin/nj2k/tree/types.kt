@@ -68,6 +68,7 @@ fun JKExpression.type(symbolProvider: JKSymbolProvider): JKType? =
         is JKLambdaExpression -> returnType.type
         is JKLabeledStatement ->
             statement.safeAs<JKExpressionStatement>()?.expression?.type(symbolProvider)
+        is JKMethodReferenceExpression -> JKNoTypeImpl //TODO
         else -> TODO(this::class.java.toString())
     }
 

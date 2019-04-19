@@ -702,7 +702,7 @@ class NewCodeBuilder(context: NewJ2kConverterContext) {
             }
             renderClassSymbol(javaNewExpression.classSymbol, javaNewExpression)
             javaNewExpression.typeArgumentList.accept(this)
-            if (!javaNewExpression.classSymbol.isInterface()) {
+            if (!javaNewExpression.classSymbol.isInterface() || javaNewExpression.arguments.arguments.isNotEmpty()) {
                 printer.par(ROUND) {
                     javaNewExpression.arguments.accept(this)
                 }
@@ -773,6 +773,18 @@ class NewCodeBuilder(context: NewJ2kConverterContext) {
 
         override fun visitPackageAccessExpressionRaw(packageAccessExpression: JKPackageAccessExpression) {
             printer.printWithNoIndent(packageAccessExpression.identifier.name.escaped())
+        }
+
+        override fun visitMethodReferenceExpressionRaw(methodReferenceExpression: JKMethodReferenceExpression) {
+            methodReferenceExpression.qualifier.accept(this)
+            printer.printWithNoIndent("::")
+            val needFqName = methodReferenceExpression.qualifier is JKStubExpression
+            val displayName =
+                if (needFqName) methodReferenceExpression.identifier.getDisplayName()
+                else methodReferenceExpression.identifier.name
+
+            printer.printWithNoIndent(displayName.escapedAsQualifiedName())
+
         }
 
         override fun visitDelegationConstructorCallRaw(delegationConstructorCall: JKDelegationConstructorCall) {

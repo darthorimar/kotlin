@@ -68,7 +68,6 @@ object ConversionsRunner {
             +LabeledStatementConversion()
             +TypeParametersNullabilityConversion()
             +ArrayOperationsConversion(context)
-            +BuiltinMembersConversion(context)
             +EqualsOperatorConversion(context)
             +TypeMappingConversion(context)
             +ImplicitCastsConversion(context)
@@ -80,6 +79,10 @@ object ConversionsRunner {
             +StaticsToCompanionExtractConversion()
             +InterfaceWithFieldConversion()
             +ClassToObjectPromotionConversion(context)
+            +MethodReferenceToLambdaConversion(context)
+            +BuiltinMembersConversion(context)
+            +ImplicitCastsConversion(context)
+
             +CollectImportsConversion(context)
             +SortClassMembersConversion()
             +AddElementsInfoConversion(context)
