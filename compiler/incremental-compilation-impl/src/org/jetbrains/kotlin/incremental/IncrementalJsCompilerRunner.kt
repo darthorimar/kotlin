@@ -20,7 +20,8 @@ import org.jetbrains.kotlin.build.GeneratedFile
 import org.jetbrains.kotlin.cli.common.ExitCode
 import org.jetbrains.kotlin.cli.common.arguments.K2JSCompilerArguments
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-import org.jetbrains.kotlin.cli.js.K2JSCompiler
+//import org.jetbrains.kotlin.cli.js.K2JSCompiler
+//import org.jetbrains.kotlin.cli.js.K2JSCompiler
 import org.jetbrains.kotlin.config.IncrementalCompilation
 import org.jetbrains.kotlin.config.Services
 import org.jetbrains.kotlin.incremental.components.ExpectActualTracker
@@ -155,7 +156,8 @@ class IncrementalJsCompilerRunner(
 
         return try {
             args.freeArgs += sourcesToCompile.map { it.absolutePath }
-            K2JSCompiler().exec(messageCollector, services, args)
+//            K2JSCompiler().exec(messageCollector, services, args)
+            ExitCode.OK
         } finally {
             args.freeArgs = freeArgsBackup
         }

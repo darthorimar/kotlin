@@ -41,7 +41,7 @@ import org.jetbrains.kotlin.config.*
 import org.jetbrains.kotlin.extensions.ProjectExtensionDescriptor
 import org.jetbrains.kotlin.gradle.ArgsInfo
 import org.jetbrains.kotlin.gradle.CompilerArgumentsBySourceSet
-import org.jetbrains.kotlin.ide.konan.NativeLibraryKind
+//import org.jetbrains.kotlin.ide.konan.NativeLibraryKind
 import org.jetbrains.kotlin.idea.compiler.configuration.KotlinCommonCompilerArgumentsHolder
 import org.jetbrains.kotlin.idea.configuration.GradlePropertiesFileFacade.Companion.KOTLIN_CODE_STYLE_GRADLE_SETTING
 import org.jetbrains.kotlin.idea.facet.*
@@ -179,7 +179,7 @@ class KotlinGradleLibraryDataService : AbstractProjectDataService<LibraryData, V
             if (anyNonJvmModules || ideLibrary.looksAsNonJvmLibrary()) {
                 detectLibraryKind(modifiableModel.getFiles(OrderRootType.CLASSES))?.let { modifiableModel.kind = it }
             } else if (ideLibrary is LibraryImpl
-                && (ideLibrary.kind === JSLibraryKind || ideLibrary.kind === NativeLibraryKind || ideLibrary.kind === CommonLibraryKind)
+                && (ideLibrary.kind === JSLibraryKind /*|| ideLibrary.kind === NativeLibraryKind*/ || ideLibrary.kind === CommonLibraryKind)
             ) {
                 resetLibraryKind(modifiableModel)
             }
