@@ -6,23 +6,29 @@
 package org.jetbrains.kotlin.nj2k.postProcessing.processings
 
 import com.intellij.codeInsight.actions.OptimizeImportsProcessor
+import com.intellij.openapi.util.TextRange
+import com.intellij.psi.PsiComment
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.codeStyle.CodeStyleManager
+import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
 import org.jetbrains.kotlin.idea.core.ShortenReferences
 import org.jetbrains.kotlin.idea.core.util.range
 import org.jetbrains.kotlin.idea.formatter.commitAndUnblockDocument
-import org.jetbrains.kotlin.nj2k.nullabilityAnalysis.AnalysisScope
-import org.jetbrains.kotlin.nj2k.nullabilityAnalysis.NullabilityAnalysisFacade
-import org.jetbrains.kotlin.nj2k.nullabilityAnalysis.nullabilityByUndefinedNullabilityComment
-import org.jetbrains.kotlin.nj2k.nullabilityAnalysis.prepareTypeElementByMakingAllTypesNullableConsideringNullabilityComment
+import org.jetbrains.kotlin.nj2k.asLabel
+import org.jetbrains.kotlin.nj2k.inference.common.BoundTypeCalculator
+import org.jetbrains.kotlin.nj2k.inference.common.InferenceFacade
+import org.jetbrains.kotlin.nj2k.inference.nullability.NullabilityBoundTypeEnhancer
+import org.jetbrains.kotlin.nj2k.inference.nullability.NullabilityConstraintsCollector
+import org.jetbrains.kotlin.nj2k.inference.nullability.NullabilityContextCollector
+import org.jetbrains.kotlin.nj2k.inference.nullability.NullabilityStateUpdater
 import org.jetbrains.kotlin.nj2k.postProcessing.postProcessing
-import org.jetbrains.kotlin.psi.KtElement
-import org.jetbrains.kotlin.psi.KtImportDirective
-import org.jetbrains.kotlin.psi.KtImportList
-import org.jetbrains.kotlin.psi.KtPackageDirective
+import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.elementsInRange
 
 val formatCodeProcessing =
     postProcessing { file, rangeMarker, _ ->
+        file.commitAndUnblockDocument()
         val codeStyleManager = CodeStyleManager.getInstance(file.project)
         if (rangeMarker != null) {
             if (rangeMarker.isValid) {
@@ -34,7 +40,7 @@ val formatCodeProcessing =
     }
 
 val nullabilityProcessing =
-    postProcessing { file, rangeMarker, converterContext ->
+    postProcessing { file, rangeMarker, convertalmanasheckalmanasheckalmanasheckerContext ->
         NullabilityAnalysisFacade(
             converterContext,
             getTypeElementNullability = { nullabilityByUndefinedNullabilityComment(it, converterContext) },
@@ -42,6 +48,27 @@ val nullabilityProcessing =
             debugPrint = false
         ).fixNullability(AnalysisScope(file, rangeMarker))
     }
+
+val clearUndefinedNullabilityLabels =
+    postProcessing { file, _, _ ->
+        file.clearUndefinedLabels()
+    }
+
+private fun KtFile.clearUndefinedLabels() {
+    val comments = mutableListOf<PsiComment>()
+    accept(object : PsiElementVisitor() {
+        override fun visitElement(element: PsiElement) {
+            element.acceptChildren(this)
+        }
+
+        override fun visitComment(comment: PsiComment) {
+            if (comment.text.asLabel() != null) {
+                comments += comment
+            }
+        }
+    })
+    comments.forEach { it.delete() }
+}
 
 val shortenReferencesProcessing =
     postProcessing { file, rangeMarker, _ ->

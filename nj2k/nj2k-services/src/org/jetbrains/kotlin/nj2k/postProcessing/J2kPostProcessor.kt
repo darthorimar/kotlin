@@ -234,7 +234,10 @@ private val cleaningUpDiagnosticBasedPostProcessingGroup =
 private val processings: List<NamedPostProcessingGroup> = listOf(
     NamedPostProcessingGroup(
         "Inferring declarations nullability",
-        listOf(nullabilityProcessing)
+        listOf(
+            nullabilityProcessing,
+            clearUndefinedNullabilityLabels
+        )
     ),
     NamedPostProcessingGroup(
         "Formatting code",
