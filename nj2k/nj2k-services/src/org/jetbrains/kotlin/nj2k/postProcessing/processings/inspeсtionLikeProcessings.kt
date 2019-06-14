@@ -57,8 +57,7 @@ class RemoveExplicitPropertyTypeProcessing : ApplicabilityBasedInspectionLikePro
         val withoutExpectedType =
             initializer.analyzeInContext(initializer.getResolutionScope()).getType(initializer) ?: return false
         val descriptor = element.resolveToDescriptorIfAny() as? CallableDescriptor ?: return false
-        return if (element.isVar) withoutExpectedType == descriptor.returnType
-        else withoutExpectedType.makeNotNullable() == descriptor.returnType?.makeNotNullable()
+        return withoutExpectedType == descriptor.returnType
     }
 
     override fun apply(element: KtProperty) {
