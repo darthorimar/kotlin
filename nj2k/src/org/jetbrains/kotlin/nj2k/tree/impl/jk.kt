@@ -408,7 +408,7 @@ class JKInheritanceInfoImpl(
 
 
 class JKDelegationConstructorCallImpl(
-    override val identifier: JKMethodSymbol,
+    override var identifier: JKMethodSymbol,
     expression: JKExpression,
     arguments: JKArgumentList
 ) : JKBranchElementBase(), JKDelegationConstructorCall, PsiOwner by PsiOwnerImpl() {

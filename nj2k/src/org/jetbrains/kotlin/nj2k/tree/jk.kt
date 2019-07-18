@@ -256,7 +256,7 @@ fun JKModifiersListOwner.modifierElements(): List<JKModifierElement> =
 
 
 interface JKTypeElement : JKTreeElement {
-    val type: JKType
+    var type: JKType
 }
 
 abstract class JKStatement : JKTreeElement, JKBranchElementBase() {
@@ -330,7 +330,7 @@ interface JKTypeArgumentListOwner : JKTreeElement {
 }
 
 interface JKMethodCallExpression : JKExpression, JKTypeArgumentListOwner, JKBranchElement {
-    val identifier: JKMethodSymbol
+    var identifier: JKMethodSymbol
     var arguments: JKArgumentList
 }
 
@@ -453,11 +453,11 @@ interface JKLambdaExpression : JKExpression {
     var parameters: List<JKParameter>
     val returnType: JKTypeElement
     var statement: JKStatement
-    val functionalType: JKTypeElement
+    var functionalType: JKTypeElement
 }
 
 interface JKDelegationConstructorCall : JKMethodCallExpression {
-    override val identifier: JKMethodSymbol
+    override var identifier: JKMethodSymbol
     val expression: JKExpression
     override var arguments: JKArgumentList
 }

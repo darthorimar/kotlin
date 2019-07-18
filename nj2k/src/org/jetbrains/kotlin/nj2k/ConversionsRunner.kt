@@ -79,7 +79,9 @@ object ConversionsRunner {
             +ClassToObjectPromotionConversion(context)
             +RemoveWrongExtraModifiersForSingleFunctionsConversion()
             +MethodReferenceToLambdaConversion(context)
+            +JavaStreamApiConversion(context)
             +BuiltinMembersConversion(context)
+            +RemoveTypeArgumentsConversion()
             +ImplicitCastsConversion(context)
             +LiteralConversion()
 
