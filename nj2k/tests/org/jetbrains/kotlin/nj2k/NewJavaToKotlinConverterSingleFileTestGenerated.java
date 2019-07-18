@@ -3077,6 +3077,49 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         }
     }
 
+    @TestMetadata("nj2k/testData/newJ2k/javaStreamsApi")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class JavaStreamsApi extends AbstractNewJavaToKotlinConverterSingleFileTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInJavaStreamsApi() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("nj2k/testData/newJ2k/javaStreamsApi"), Pattern.compile("^([^\\.]+)\\.java$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("collectStream.java")
+        public void testCollectStream() throws Exception {
+            runTest("nj2k/testData/newJ2k/javaStreamsApi/collectStream.java");
+        }
+
+        @TestMetadata("createStream.java")
+        public void testCreateStream() throws Exception {
+            runTest("nj2k/testData/newJ2k/javaStreamsApi/createStream.java");
+        }
+
+        @TestMetadata("dontCollectOnExistingStreams.java")
+        public void testDontCollectOnExistingStreams() throws Exception {
+            runTest("nj2k/testData/newJ2k/javaStreamsApi/dontCollectOnExistingStreams.java");
+        }
+
+        @TestMetadata("formatting.java")
+        public void testFormatting() throws Exception {
+            runTest("nj2k/testData/newJ2k/javaStreamsApi/formatting.java");
+        }
+
+        @TestMetadata("kt-21467.java")
+        public void testKt_21467() throws Exception {
+            runTest("nj2k/testData/newJ2k/javaStreamsApi/kt-21467.java");
+        }
+
+        @TestMetadata("streamOperations.java")
+        public void testStreamOperations() throws Exception {
+            runTest("nj2k/testData/newJ2k/javaStreamsApi/streamOperations.java");
+        }
+    }
+
     @TestMetadata("nj2k/testData/newJ2k/kotlinApiAccess")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
