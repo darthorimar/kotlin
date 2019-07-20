@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.idea.caches.resolve.analyze
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
 import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
 import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.forEachDescendantOfType
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.callUtil.getType
@@ -37,7 +38,6 @@ abstract class ContextCollector(private val resolutionFacade: ResolutionFacade) 
             ?.safeAs<TypeParameterDescriptor>() ?: return TypeElementDataImpl(this)
         return TypeParameterElementData(this, typeParameterDescriptor)
     }
-
 
     fun collectTypeVariables(elements: List<KtElement>): InferenceContext {
         val declarationToTypeVariable = mutableMapOf<KtNamedDeclaration, TypeVariable>()
@@ -107,6 +107,8 @@ abstract class ContextCollector(private val resolutionFacade: ResolutionFacade) 
             }
         }
 
+        val substitutors = mutableMapOf<ClassDescriptor, ClassSubstitutor>()
+
         for (element in elements) {
             element.forEachDescendantOfType<KtExpression> { expression ->
                 if (expression is KtCallableDeclaration
@@ -120,6 +122,26 @@ abstract class ContextCollector(private val resolutionFacade: ResolutionFacade) 
                 }
 
                 when (expression) {
+                    is KtClass -> {
+                        for (entry in expression.superTypeListEntries) {
+                            for (argument in entry.typeReference?.typeElement?.typeArgumentsAsTypes ?: continue) {
+                                argument.toBoundType()
+                            }
+                        }
+                        val descriptor =
+                            expression.resolveToDescriptorIfAny(resolutionFacade) ?: return@forEachDescendantOfType
+                        substitutors[descriptor] =
+                            ClassSubstitutor.createFromKtClass(expression, resolutionFacade) ?: return@forEachDescendantOfType
+                        for (typeParameter in expression.typeParameters) {
+                            val typeVariable = typeParameter.resolveToDescriptorIfAny(resolutionFacade)
+                                ?.safeAs<TypeParameterDescriptor>()
+                                ?.defaultType
+                                ?.toBoundType()
+                                ?.typeVariable
+                                ?: continue
+                            declarationToTypeVariable[typeParameter] = typeVariable
+                        }
+                    }
                     is KtCallExpression ->
                         for (typeArgument in expression.typeArguments) {
                             typeArgument.typeReference?.toBoundType()
@@ -147,9 +169,12 @@ abstract class ContextCollector(private val resolutionFacade: ResolutionFacade) 
             typeVariables,
             typeElementToTypeVariable,
             declarationToTypeVariable,
-            declarationToTypeVariable.mapKeys { (key, _) -> key.resolveToDescriptorIfAny(resolutionFacade)!! }
+            declarationToTypeVariable.mapKeys { (key, _) -> key.resolveToDescriptorIfAny(resolutionFacade)!! },
+            substitutors
         )
     }
 
     abstract fun ClassReference.getState(typeElement: KtTypeElement?): State?
+
+
 }

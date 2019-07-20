@@ -6,8 +6,11 @@
 package org.jetbrains.kotlin.nj2k.inference.common
 
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.idea.core.util.range
+import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
+import org.jetbrains.kotlin.nj2k.NewJ2kConverterContext
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.psi.KtNamedDeclaration
 import org.jetbrains.kotlin.psi.KtTypeElement
@@ -17,7 +20,9 @@ data class InferenceContext(
     val typeVariables: List<TypeVariable>,
     val typeElementToTypeVariable: Map<KtTypeElement, TypeVariable>,
     val declarationToTypeVariable: Map<KtNamedDeclaration, TypeVariable>,
-    val declarationDescriptorToTypeVariable: Map<DeclarationDescriptor, TypeVariable>
+    val declarationDescriptorToTypeVariable: Map<DeclarationDescriptor, TypeVariable>,
+    val classSupstitutions: Map<ClassDescriptor, ClassSubstitutor>
+
 ) {
     fun isInConversionScope(childCandidate: PsiElement) =
         if (childCandidate is KtElement) {

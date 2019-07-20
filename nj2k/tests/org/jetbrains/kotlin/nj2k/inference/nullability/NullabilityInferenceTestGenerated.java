@@ -29,6 +29,11 @@ public class NullabilityInferenceTestGenerated extends AbstractNullabilityInfere
         KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("nj2k/testData/inference/nullability/inference"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
     }
 
+    @TestMetadata("classTypeParameters.kt")
+    public void testClassTypeParameters() throws Exception {
+        runTest("nj2k/testData/inference/nullability/inference/classTypeParameters.kt");
+    }
+
     @TestMetadata("compareWithNull.kt")
     public void testCompareWithNull() throws Exception {
         runTest("nj2k/testData/inference/nullability/inference/compareWithNull.kt");

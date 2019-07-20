@@ -5,19 +5,15 @@
 
 package org.jetbrains.kotlin.nj2k.inference.nullability
 
-import com.intellij.psi.PsiComment
-import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
-import org.jetbrains.kotlin.nj2k.JKElementInfoLabel
 import org.jetbrains.kotlin.nj2k.NewJ2kConverterContext
 import org.jetbrains.kotlin.nj2k.UnknownNullability
-import org.jetbrains.kotlin.nj2k.asLabel
 import org.jetbrains.kotlin.nj2k.inference.common.ClassReference
 import org.jetbrains.kotlin.nj2k.inference.common.ContextCollector
 import org.jetbrains.kotlin.nj2k.inference.common.State
+import org.jetbrains.kotlin.nj2k.inference.common.getLabel
 import org.jetbrains.kotlin.psi.KtNullableType
 import org.jetbrains.kotlin.psi.KtTypeElement
-import org.jetbrains.kotlin.psi.KtTypeProjection
 import org.jetbrains.kotlin.psi.KtTypeReference
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
@@ -38,14 +34,6 @@ class NullabilityContextCollector(
         }
     }
 
-    private fun PsiElement.getLabel(): JKElementInfoLabel? =
-        prevSibling
-            ?.safeAs<PsiComment>()
-            ?.text
-            ?.asLabel()
-            ?: parent
-                ?.safeAs<KtTypeProjection>()
-                ?.getLabel()
 
     private fun KtTypeReference.hasUndefinedNullabilityLabel(context: NewJ2kConverterContext) =
         getLabel()?.let { label ->

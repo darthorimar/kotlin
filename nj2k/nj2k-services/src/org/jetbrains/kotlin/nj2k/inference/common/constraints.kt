@@ -15,7 +15,6 @@ enum class ConstraintPriority {
     PARAMETER,
 }
 
-
 sealed class Constraint {
     abstract val priority: ConstraintPriority
 }

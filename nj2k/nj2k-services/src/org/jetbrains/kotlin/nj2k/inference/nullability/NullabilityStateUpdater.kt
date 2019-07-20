@@ -37,11 +37,9 @@ class NullabilityStateUpdater : StateUpdater() {
         }
     }
 
-
     private fun TypeElementBasedTypeVariable.changeState(toNullable: Boolean) {
         changeState(typeElement.typeElement, toNullable)
     }
-
 
     companion object {
         fun changeState(typeElement: KtTypeElement, toNullable: Boolean) {

@@ -7,48 +7,49 @@ package org.jetbrains.kotlin.nj2k.inference.nullability
 
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.isNullExpression
 import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
+import org.jetbrains.kotlin.nj2k.NewJ2kConverterContext
 import org.jetbrains.kotlin.nj2k.inference.common.*
+import org.jetbrains.kotlin.nj2k.inference.common.collectors.ConstraintsCollector
 import org.jetbrains.kotlin.psi.*
 
-class NullabilityConstraintsCollector(resolutionFacade: ResolutionFacade) : ConstraintsCollector(resolutionFacade) {
-    override fun ConstraintBuilder.collectAdditionalConstraints(
-        expression: KtElement,
+class NullabilityConstraintsCollector : ConstraintsCollector() {
+    override fun ConstraintBuilder.collectConstraints(
+        element: KtElement,
         boundTypeCalculator: BoundTypeCalculator,
-        inferenceContext: InferenceContext
+        resolutionFacade: ResolutionFacade
     ) = with(boundTypeCalculator) {
         when {
-            expression is KtBinaryExpression &&
-                    (expression.left?.isNullExpression() == true
-                            || expression.right?.isNullExpression() == true) -> {
+            element is KtBinaryExpression &&
+                    (element.left?.isNullExpression() == true
+                            || element.right?.isNullExpression() == true) -> {
                 val notNullOperand =
-                    if (expression.left?.isNullExpression() == true) expression.right
-                    else expression.left
+                    if (element.left?.isNullExpression() == true) element.right
+                    else element.left
                 notNullOperand?.isTheSameTypeAs(State.UPPER, ConstraintPriority.COMPARE_WITH_NULL)
             }
-            expression is KtQualifiedExpression -> {
-                expression.receiverExpression.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
+            element is KtQualifiedExpression -> {
+                element.receiverExpression.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
             }
 
-            expression is KtForExpression -> {
-                expression.loopRange?.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
+            element is KtForExpression -> {
+                element.loopRange?.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
             }
 
-            expression is KtWhileExpressionBase -> {
-                expression.condition?.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
+            element is KtWhileExpressionBase -> {
+                element.condition?.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
             }
 
-            expression is KtIfExpression -> {
-                expression.condition?.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
+            element is KtIfExpression -> {
+                element.condition?.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
             }
-            expression is KtValueArgument && expression.isSpread -> {
-                expression.getArgumentExpression()?.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
+            element is KtValueArgument && element.isSpread -> {
+                element.getArgumentExpression()?.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
             }
-            expression is KtBinaryExpression && !KtPsiUtil.isAssignment(expression) -> {
-                expression.left?.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
-                expression.right?.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
+            element is KtBinaryExpression && !KtPsiUtil.isAssignment(element) -> {
+                element.left?.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
+                element.right?.isTheSameTypeAs(State.LOWER, ConstraintPriority.USE_AS_RECEIVER)
             }
         }
         Unit
     }
-
 }

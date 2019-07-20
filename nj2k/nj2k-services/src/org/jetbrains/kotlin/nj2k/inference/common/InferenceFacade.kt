@@ -11,14 +11,14 @@ import org.jetbrains.kotlin.psi.KtPsiFactory
 
 class InferenceFacade(
     private val typeVariablesCollector: ContextCollector,
-    private val constraintsCollector: ConstraintsCollector,
+    private val constraintsCollectorAggregator: ConstraintsCollectorAggregator,
     private val boundTypeCalculator: BoundTypeCalculator,
     private val stateUpdater: StateUpdater,
     private val isDebugMode: Boolean
 ) {
     fun runOn(elements: List<KtElement>) {
         val inferenceContext = typeVariablesCollector.collectTypeVariables(elements)
-        val constraints = constraintsCollector.collectConstraints(boundTypeCalculator, inferenceContext, elements)
+        val constraints = constraintsCollectorAggregator.collectConstraints(boundTypeCalculator, inferenceContext, elements)
 
         val initialConstraints = if (isDebugMode) constraints.map { it.copy() } else null
         Solver(inferenceContext, true).solveConstraints(constraints)

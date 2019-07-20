@@ -11,7 +11,6 @@ import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.projectRoots.SdkModificator
 import com.intellij.openapi.projectRoots.impl.JavaSdkImpl
 import com.intellij.openapi.util.io.FileUtil
-import com.intellij.psi.PsiComment
 import com.intellij.psi.codeStyle.JavaCodeStyleSettings
 import com.intellij.testFramework.LightProjectDescriptor
 import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
@@ -19,6 +18,8 @@ import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
 import org.jetbrains.kotlin.idea.test.KotlinLightCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.idea.test.KotlinWithJdkAndRuntimeLightProjectDescriptor
 import org.jetbrains.kotlin.nj2k.inference.common.*
+import org.jetbrains.kotlin.nj2k.inference.common.collectors.CommonConstraintsCollector
+import org.jetbrains.kotlin.nj2k.inference.common.collectors.FunctionConstraintsCollector
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtTypeElement
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
@@ -26,12 +27,19 @@ import org.jetbrains.kotlin.test.InTextDirectivesUtils
 import org.jetbrains.kotlin.test.KotlinTestUtils
 import java.io.File
 
-abstract class  AbstractNullabilityInferenceTest : KotlinLightCodeInsightFixtureTestCase() {
+abstract class AbstractNullabilityInferenceTest : KotlinLightCodeInsightFixtureTestCase() {
     private fun createInferenceFacade(resolutionFacade: ResolutionFacade): InferenceFacade {
         val typeEnhancer = NullabilityBoundTypeEnhancer(resolutionFacade)
         return InferenceFacade(
             TestContextCollector(resolutionFacade),
-            NullabilityConstraintsCollector(resolutionFacade),
+            ConstraintsCollectorAggregator(
+                resolutionFacade,
+                listOf(
+                    CommonConstraintsCollector(),
+                    FunctionConstraintsCollector(ResolveSuperFunctionsProvider(resolutionFacade)),
+                    NullabilityConstraintsCollector()
+                )
+            ),
             BoundTypeCalculator(resolutionFacade, typeEnhancer),
             NullabilityStateUpdater(),
             isDebugMode = false

@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.nj2k.inference.common
 
 import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtTypeElement
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
@@ -41,15 +42,43 @@ class ConstraintBuilder(
         }
     }
 
-    fun BoundType.isTheSameTypeAs(other: BoundType, priority: ConstraintPriority) {
+    fun TypeVariable.isTheSameTypeAs(other: BoundType, priority: ConstraintPriority) {
+        asBoundType().isTheSameTypeAs(other, priority)
+    }
+
+    fun TypeVariable.isTheSameTypeAs(
+        other: TypeVariable,
+        priority: ConstraintPriority,
+        ignoreTypeVariables: Set<TypeVariable> = emptySet()
+    ) {
+        asBoundType().isTheSameTypeAs(other.asBoundType(), priority, ignoreTypeVariables)
+    }
+
+    fun KtTypeElement.isTheSameTypeAs(other: KtTypeElement, priority: ConstraintPriority) {
+        inferenceContext.typeElementToTypeVariable[this]
+            ?.asBoundType()
+            ?.isTheSameTypeAs(
+                inferenceContext.typeElementToTypeVariable[other]?.asBoundType() ?: return,
+                priority
+            )
+    }
+
+    fun BoundType.isTheSameTypeAs(
+        other: BoundType,
+        priority: ConstraintPriority,
+        ignoreTypeVariables: Set<TypeVariable> = emptySet()
+    ) {
         (typeParameters zip other.typeParameters).forEach { (left, right) ->
-            left.boundType.isTheSameTypeAs(right.boundType, priority)
+            left.boundType.isTheSameTypeAs(right.boundType, priority, ignoreTypeVariables)
         }
-        constraints += EqualsConstraint(
-            constraintBound ?: return,
-            other.constraintBound ?: return,
-            priority
-        )
+
+        if (typeVariable !in ignoreTypeVariables && other.typeVariable !in ignoreTypeVariables) {
+            constraints += EqualsConstraint(
+                constraintBound ?: return,
+                other.constraintBound ?: return,
+                priority
+            )
+        }
     }
 
     fun BoundType.isSubtypeOf(supertype: BoundType, priority: ConstraintPriority) {

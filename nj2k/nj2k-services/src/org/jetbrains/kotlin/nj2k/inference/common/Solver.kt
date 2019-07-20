@@ -25,7 +25,7 @@ class Solver(
                 }
                 println()
                 println("type variables:")
-                for (typeVariable in inferenceContext.typeElementToTypeVariable.values) {
+                for (typeVariable in inferenceContext.typeVariables) {
                     println("${typeVariable.name} := ${typeVariable.state}")
                 }
                 println("---------------\n")

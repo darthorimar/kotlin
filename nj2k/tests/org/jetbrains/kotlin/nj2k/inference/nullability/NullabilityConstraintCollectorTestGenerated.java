@@ -84,6 +84,11 @@ public class NullabilityConstraintCollectorTestGenerated extends AbstractNullabi
         runTest("nj2k/testData/inference/nullability/constraints/spreadExpression.kt");
     }
 
+    @TestMetadata("typeParameters.kt")
+    public void testTypeParameters() throws Exception {
+        runTest("nj2k/testData/inference/nullability/constraints/typeParameters.kt");
+    }
+
     @TestMetadata("useAsReceiver.kt")
     public void testUseAsReceiver() throws Exception {
         runTest("nj2k/testData/inference/nullability/constraints/useAsReceiver.kt");

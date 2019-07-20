@@ -139,6 +139,21 @@ public class CommonConstraintCollectorTestGenerated extends AbstractCommonConstr
         runTest("nj2k/testData/inference/common/superConstuctorCall.kt");
     }
 
+    @TestMetadata("superFunctionReturnTypeWithTypeParameters.kt")
+    public void testSuperFunctionReturnTypeWithTypeParameters() throws Exception {
+        runTest("nj2k/testData/inference/common/superFunctionReturnTypeWithTypeParameters.kt");
+    }
+
+    @TestMetadata("superFunctionReturnTypeWithTypeParametersSubstitution.kt")
+    public void testSuperFunctionReturnTypeWithTypeParametersSubstitution() throws Exception {
+        runTest("nj2k/testData/inference/common/superFunctionReturnTypeWithTypeParametersSubstitution.kt");
+    }
+
+    @TestMetadata("superFunctionType.kt")
+    public void testSuperFunctionType() throws Exception {
+        runTest("nj2k/testData/inference/common/superFunctionType.kt");
+    }
+
     @TestMetadata("varargsInCall.kt")
     public void testVarargsInCall() throws Exception {
         runTest("nj2k/testData/inference/common/varargsInCall.kt");

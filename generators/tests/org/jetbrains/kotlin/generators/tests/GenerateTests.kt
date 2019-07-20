@@ -997,6 +997,7 @@ fun main(args: Array<String>) {
         }
         testClass<AbstractNullabilityInferenceTest> {
             model("inference/nullability/inference")
+        }
         testClass<AbstractNewJavaToKotlinCopyPasteConversionTest> {
             model("copyPaste", pattern = """^([^\.]+)\.java$""")
         }

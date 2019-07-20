@@ -16,6 +16,8 @@ import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
 import org.jetbrains.kotlin.idea.test.KotlinWithJdkAndRuntimeLightProjectDescriptor
 import org.jetbrains.kotlin.nj2k.inference.AbstractConstraintCollectorTest
 import org.jetbrains.kotlin.nj2k.inference.common.*
+import org.jetbrains.kotlin.nj2k.inference.common.collectors.CommonConstraintsCollector
+import org.jetbrains.kotlin.nj2k.inference.common.collectors.FunctionConstraintsCollector
 import org.jetbrains.kotlin.psi.KtTypeElement
 import org.jetbrains.kotlin.test.InTextDirectivesUtils
 import java.io.File
@@ -24,8 +26,18 @@ abstract class AbstractNullabilityConstraintCollectorTest : AbstractConstraintCo
     override fun createInferenceFacade(resolutionFacade: ResolutionFacade): InferenceFacade {
         val typeEnhancer = NullabilityBoundTypeEnhancer(resolutionFacade)
         return InferenceFacade(
-            TestContextCollector(resolutionFacade),
-            NullabilityConstraintsCollector(resolutionFacade),
+            object : ContextCollector(resolutionFacade) {
+                override fun ClassReference.getState(typeElement: KtTypeElement?): State? =
+                    State.UNKNOWN
+            },
+            ConstraintsCollectorAggregator(
+                resolutionFacade,
+                listOf(
+                    CommonConstraintsCollector(),
+                    FunctionConstraintsCollector(ResolveSuperFunctionsProvider(resolutionFacade)),
+                    NullabilityConstraintsCollector()
+                )
+            ),
             BoundTypeCalculator(resolutionFacade, typeEnhancer),
             object : StateUpdater() {
                 override fun updateStates(inferenceContext: InferenceContext) {
@@ -33,10 +45,6 @@ abstract class AbstractNullabilityConstraintCollectorTest : AbstractConstraintCo
             },
             isDebugMode = true
         )
-    }
-
-    private class TestContextCollector(resolutionFacade: ResolutionFacade) : ContextCollector(resolutionFacade) {
-        override fun ClassReference.getState(typeElement: KtTypeElement?): State? = State.UNKNOWN
     }
 
     override fun setUp() {

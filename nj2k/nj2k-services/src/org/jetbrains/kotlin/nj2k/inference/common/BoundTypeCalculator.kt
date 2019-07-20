@@ -133,12 +133,11 @@ class BoundTypeCalculator(private val resolutionFacade: ResolutionFacade, privat
         return selectorExpression.toBoundTypeAsCallableExpression(receiverBoundType, inferenceContext)
     }
 
-
     fun KotlinType.boundType(
-        typeVariable: TypeVariable?,
-        contextBoundType: BoundType?,
-        call: ResolvedCall<*>?,
-        isImplicitReceiver: Boolean,
+        typeVariable: TypeVariable? = null,
+        contextBoundType: BoundType? = null,
+        call: ResolvedCall<*>? = null,
+        isImplicitReceiver: Boolean = false,
         inferenceContext: InferenceContext
     ) = boundTypeUnenhanced(
         typeVariable,

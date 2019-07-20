@@ -32,7 +32,6 @@ abstract class BoundTypeEnhancer {
             type: KotlinType,
             boundType: BoundType,
             inferenceContext: InferenceContext
-        ): BoundType =
-            boundType
+        ): BoundType = boundType
     }
 }

@@ -3,7 +3,7 @@
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
-package org.jetbrains.kotlin.nj2k.inference.common
+package org.jetbrains.kotlin.nj2k.inference.common.collectors
 
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
@@ -12,10 +12,9 @@ import org.jetbrains.kotlin.idea.caches.resolve.analyze
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToCall
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
 import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
-import org.jetbrains.kotlin.nj2k.parentOfType
+import org.jetbrains.kotlin.nj2k.inference.common.*
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.asAssignment
-import org.jetbrains.kotlin.psi.psiUtil.forEachDescendantOfType
 import org.jetbrains.kotlin.psi.psiUtil.getQualifiedExpressionForSelector
 import org.jetbrains.kotlin.resolve.bindingContextUtil.getTargetFunction
 import org.jetbrains.kotlin.resolve.calls.callUtil.getType
@@ -23,95 +22,70 @@ import org.jetbrains.kotlin.resolve.calls.components.isVararg
 import org.jetbrains.kotlin.resolve.scopes.DescriptorKindFilter
 import org.jetbrains.kotlin.resolve.scopes.getDescriptorsFiltered
 import org.jetbrains.kotlin.types.KotlinType
-import org.jetbrains.kotlin.types.typeUtil.isArrayOfNothing
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
-abstract class ConstraintsCollector(private val resolutionFacade: ResolutionFacade) {
-    fun collectConstraints(
+class CommonConstraintsCollector : ConstraintsCollector() {
+    override fun ConstraintBuilder.collectConstraints(
+        element: KtElement,
         boundTypeCalculator: BoundTypeCalculator,
-        inferenceContext: InferenceContext,
-        elements: List<KtElement>
-    ): List<Constraint> {
-        val constraintsBuilder = ConstraintBuilder(inferenceContext, boundTypeCalculator)
-        for (element in elements) {
-            element.forEachDescendantOfType<KtElement> { expression ->
-                if (expression.parentOfType<KtImportDirective>() != null) return@forEachDescendantOfType
-                with(constraintsBuilder) {
-                    collectCommonConstraints(expression, boundTypeCalculator, inferenceContext)
-                    collectAdditionalConstraints(expression, boundTypeCalculator, inferenceContext)
-                }
-            }
-        }
-        return constraintsBuilder.collectedConstraints
-    }
-
-    abstract fun ConstraintBuilder.collectAdditionalConstraints(
-        expression: KtElement,
-        boundTypeCalculator: BoundTypeCalculator,
-        inferenceContext: InferenceContext
-    )
-
-    private fun ConstraintBuilder.collectCommonConstraints(
-        expression: KtElement,
-        boundTypeCalculator: BoundTypeCalculator,
-        inferenceContext: InferenceContext
+        resolutionFacade: ResolutionFacade
     ) = with(boundTypeCalculator) {
         when {
-            expression is KtBinaryExpressionWithTypeRHS && KtPsiUtil.isUnsafeCast(expression) -> {
-                expression.right?.typeElement?.let { inferenceContext.typeElementToTypeVariable[it] }?.also { typeVariable ->
-                    expression.left.isSubtypeOf(typeVariable, ConstraintPriority.ASSIGNMENT)
+            element is KtBinaryExpressionWithTypeRHS && KtPsiUtil.isUnsafeCast(element) -> {
+                element.right?.typeElement?.let { inferenceContext.typeElementToTypeVariable[it] }?.also { typeVariable ->
+                    element.left.isSubtypeOf(typeVariable, ConstraintPriority.ASSIGNMENT)
                 }
             }
 
-            expression is KtBinaryExpression && expression.asAssignment() != null -> {
-                expression.right?.isSubtypeOf(expression.left ?: return, ConstraintPriority.ASSIGNMENT)
+            element is KtBinaryExpression && element.asAssignment() != null -> {
+                element.right?.isSubtypeOf(element.left ?: return, ConstraintPriority.ASSIGNMENT)
             }
 
 
-            expression is KtVariableDeclaration -> {
-                inferenceContext.declarationToTypeVariable[expression]?.also { typeVariable ->
-                    expression.initializer?.isSubtypeOf(typeVariable, ConstraintPriority.INITIALIZER)
+            element is KtVariableDeclaration -> {
+                inferenceContext.declarationToTypeVariable[element]?.also { typeVariable ->
+                    element.initializer?.isSubtypeOf(typeVariable, ConstraintPriority.INITIALIZER)
                 }
             }
 
-            expression is KtParameter -> {
-                inferenceContext.declarationToTypeVariable[expression]?.also { typeVariable ->
-                    expression.defaultValue?.isSubtypeOf(
+            element is KtParameter -> {
+                inferenceContext.declarationToTypeVariable[element]?.also { typeVariable ->
+                    element.defaultValue?.isSubtypeOf(
                         typeVariable,
                         ConstraintPriority.INITIALIZER
                     )
                 }
             }
 
-
-            expression is KtReturnExpression -> {
-                val functionTypeVariable = expression.getTargetFunction(expression.analyze(resolutionFacade))
+            element is KtReturnExpression -> {
+                val functionTypeVariable = element.getTargetFunction(element.analyze(resolutionFacade))
                     ?.resolveToDescriptorIfAny(resolutionFacade)
                     ?.let { functionDescriptor ->
                         inferenceContext.declarationDescriptorToTypeVariable[functionDescriptor]
                     } ?: return
-                expression.returnedExpression?.isSubtypeOf(
+                element.returnedExpression?.isSubtypeOf(
                     functionTypeVariable,
                     ConstraintPriority.RETURN
                 )
             }
 
-            expression is KtReturnExpression -> {
-                val targetTypeVariable = expression.getTargetFunction(expression.analyze(resolutionFacade))?.let { function ->
-                    inferenceContext.declarationToTypeVariable[function]
-                }
+            element is KtReturnExpression -> {
+                val targetTypeVariable =
+                    element.getTargetFunction(element.analyze(resolutionFacade))?.let { function ->
+                        inferenceContext.declarationToTypeVariable[function]
+                    }
                 if (targetTypeVariable != null) {
-                    expression.returnedExpression?.isSubtypeOf(
+                    element.returnedExpression?.isSubtypeOf(
                         targetTypeVariable,
                         ConstraintPriority.RETURN
                     )
                 }
             }
 
-            expression is KtLambdaExpression -> {
+            element is KtLambdaExpression -> {
                 val targetTypeVariable =
-                    inferenceContext.declarationToTypeVariable[expression.functionLiteral] ?: return
-                expression.functionLiteral.bodyExpression?.statements?.lastOrNull()
+                    inferenceContext.declarationToTypeVariable[element.functionLiteral] ?: return
+                element.functionLiteral.bodyExpression?.statements?.lastOrNull()
                     ?.takeIf { it !is KtReturnExpression }
                     ?.also { implicitReturn ->
                         implicitReturn.isSubtypeOf(
@@ -121,8 +95,8 @@ abstract class ConstraintsCollector(private val resolutionFacade: ResolutionFaca
                     }
             }
 
-            expression is KtCallElement -> {
-                val call = expression.resolveToCall(resolutionFacade) ?: return
+            element is KtCallElement -> {
+                val call = element.resolveToCall(resolutionFacade) ?: return
                 if (call.candidateDescriptor !is FunctionDescriptor) return
                 val valueArguments = call.valueArgumentsByIndex.orEmpty()
                 val typeParameterBindings =
@@ -166,14 +140,13 @@ abstract class ConstraintsCollector(private val resolutionFacade: ResolutionFaca
                                 ?.substituteTypeParameters()
                                 ?: parameter.original.type.boundType(
                                     null,
-                                    expression.getQualifiedExpressionForSelector()
+                                    element.getQualifiedExpressionForSelector()
                                         ?.receiverExpression
                                         ?.boundType(inferenceContext),
                                     call,
                                     false,
                                     inferenceContext
                                 )
-                        parameter.type.isArrayOfNothing()
 
                         val parameterBoundTypeConsideringVararg =
                             if (parameter.isVararg && KotlinBuiltIns.isArrayOrPrimitiveArray(parameter.type)) {
@@ -194,15 +167,15 @@ abstract class ConstraintsCollector(private val resolutionFacade: ResolutionFaca
                 }
             }
 
-            expression is KtForExpression -> {
+            element is KtForExpression -> {
                 val loopParameterTypeVariable =
-                    expression.loopParameter?.typeReference?.typeElement?.let { typeElement ->
+                    element.loopParameter?.typeReference?.typeElement?.let { typeElement ->
                         inferenceContext.typeElementToTypeVariable[typeElement]
                     }
                 if (loopParameterTypeVariable != null) {
-                    val loopRangeBoundType = expression.loopRange?.boundType(inferenceContext) ?: return
+                    val loopRangeBoundType = element.loopRange?.boundType(inferenceContext) ?: return
                     val boundType =
-                        expression.loopRangeElementType()
+                        element.loopRangeElementType(resolutionFacade)
                             ?.boundType(null, loopRangeBoundType, null, false, inferenceContext)
                             ?: return
                     loopParameterTypeVariable.isSubtypeOf(
@@ -215,7 +188,7 @@ abstract class ConstraintsCollector(private val resolutionFacade: ResolutionFaca
         Unit
     }
 
-    private fun KtForExpression.loopRangeElementType(): KotlinType? {
+    private fun KtForExpression.loopRangeElementType(resolutionFacade: ResolutionFacade): KotlinType? {
         val loopRangeType = loopRange?.getType(analyze(resolutionFacade)) ?: return null
         return loopRangeType
             .constructor
@@ -230,4 +203,3 @@ abstract class ConstraintsCollector(private val resolutionFacade: ResolutionFaca
             ?.returnType
     }
 }
-

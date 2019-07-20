@@ -6,7 +6,6 @@
 package org.jetbrains.kotlin.nj2k.postProcessing.processings
 
 import com.intellij.codeInsight.actions.OptimizeImportsProcessor
-import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
@@ -16,8 +15,9 @@ import org.jetbrains.kotlin.idea.core.ShortenReferences
 import org.jetbrains.kotlin.idea.core.util.range
 import org.jetbrains.kotlin.idea.formatter.commitAndUnblockDocument
 import org.jetbrains.kotlin.nj2k.asLabel
-import org.jetbrains.kotlin.nj2k.inference.common.BoundTypeCalculator
-import org.jetbrains.kotlin.nj2k.inference.common.InferenceFacade
+import org.jetbrains.kotlin.nj2k.inference.common.*
+import org.jetbrains.kotlin.nj2k.inference.common.collectors.CommonConstraintsCollector
+import org.jetbrains.kotlin.nj2k.inference.common.collectors.FunctionConstraintsCollector
 import org.jetbrains.kotlin.nj2k.inference.nullability.NullabilityBoundTypeEnhancer
 import org.jetbrains.kotlin.nj2k.inference.nullability.NullabilityConstraintsCollector
 import org.jetbrains.kotlin.nj2k.inference.nullability.NullabilityContextCollector
@@ -40,13 +40,25 @@ val formatCodeProcessing =
     }
 
 val nullabilityProcessing =
-    postProcessing { file, rangeMarker, convertalmanasheckalmanasheckalmanasheckerContext ->
-        NullabilityAnalysisFacade(
-            converterContext,
-            getTypeElementNullability = { nullabilityByUndefinedNullabilityComment(it, converterContext) },
-            prepareTypeElement = { prepareTypeElementByMakingAllTypesNullableConsideringNullabilityComment(it, converterContext) },
-            debugPrint = false
-        ).fixNullability(AnalysisScope(file, rangeMarker))
+    postProcessing { file, rangeMarker, converterContext ->
+        val resolutionFacade = file.getResolutionFacade()
+        val typeEnhancer = NullabilityBoundTypeEnhancer(resolutionFacade)
+
+        val inferenceFacade = InferenceFacade(
+            NullabilityContextCollector(resolutionFacade, converterContext),
+            ConstraintsCollectorAggregator(
+                resolutionFacade,
+                listOf(
+                    CommonConstraintsCollector(),
+                    FunctionConstraintsCollector(ByInfoSuperFunctionsProvider(resolutionFacade, converterContext)),
+                    NullabilityConstraintsCollector()
+                )
+            ),
+            BoundTypeCalculator(resolutionFacade, typeEnhancer),
+            NullabilityStateUpdater(),
+            isDebugMode = false
+        )
+        inferenceFacade.runOn(listOf(file))
     }
 
 val clearUndefinedNullabilityLabels =
