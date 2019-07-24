@@ -85,8 +85,8 @@ sealed class JKKtQualifierImpl : JKQualifier, JKElementBase() {
 }
 
 class JKKtCallExpressionImpl(
-    override val identifier: JKMethodSymbol,
-    arguments: JKArgumentList,
+    override var identifier: JKMethodSymbol,
+    arguments: JKArgumentList = JKArgumentListImpl(),
     typeArgumentList: JKTypeArgumentList = JKTypeArgumentListImpl()
 ) : JKKtMethodCallExpression, JKBranchElementBase() {
     override fun accept(visitor: JKVisitor) = visitor.visitKtMethodCallExpression(this)
@@ -139,7 +139,7 @@ class JKKtOperatorImpl(override val token: JKKtOperatorToken, val returnType: JK
 
 class JKKtAlsoCallExpressionImpl(
     statement: JKStatement,
-    override val identifier: JKMethodSymbol,
+    override var identifier: JKMethodSymbol,
     typeArgumentList: JKTypeArgumentList = JKTypeArgumentListImpl()
 ) : JKKtAlsoCallExpression, JKBranchElementBase() {
     override fun accept(visitor: JKVisitor) = visitor.visitKtAlsoCallExpression(this)

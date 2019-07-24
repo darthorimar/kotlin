@@ -19,6 +19,8 @@ import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.utils.addToStdlib.cast
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 fun kotlinTypeByName(name: String, symbolProvider: JKSymbolProvider, nullability: Nullability = Nullability.Nullable): JKClassType =
     JKClassTypeImpl(
@@ -443,3 +445,26 @@ fun JKExpression.qualified(qualifier: JKExpression?) =
     if (qualifier != null && qualifier !is JKStubExpression) {
         JKQualifiedExpressionImpl(qualifier, JKJavaQualifierImpl.DOT, this)
     } else this
+
+fun JKExpression.callOn(
+    symbol: JKMethodSymbol,
+    arguments: List<JKArgument> = emptyList(),
+    typeArguments: JKTypeArgumentList = JKTypeArgumentListImpl()
+) = JKQualifiedExpressionImpl(
+    this,
+    JKKtQualifierImpl.DOT,
+    JKKtCallExpressionImpl(
+        symbol,
+        JKArgumentListImpl(arguments),
+        typeArguments
+    )
+)
+
+@Suppress("EXPERIMENTAL_IS_NOT_ENABLED")
+@UseExperimental(ExperimentalContracts::class)
+fun JKExpression.isCallOf(fqName: String): Boolean {
+    contract {
+        returns(true) implies (this@isCallOf is JKMethodCallExpression)
+    }
+    return safeAs<JKMethodCallExpression>()?.identifier?.deepestFqName() == fqName
+}
