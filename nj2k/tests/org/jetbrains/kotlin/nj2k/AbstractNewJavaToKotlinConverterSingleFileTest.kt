@@ -17,11 +17,15 @@
 package org.jetbrains.kotlin.nj2k
 
 import com.intellij.openapi.application.runWriteAction
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.projectRoots.SdkModificator
 import com.intellij.openapi.projectRoots.impl.JavaSdkImpl
+import com.intellij.openapi.roots.LanguageLevelModuleExtension
+import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.util.io.FileUtil
+import com.intellij.pom.java.LanguageLevel
 import com.intellij.psi.codeStyle.JavaCodeStyleSettings
 import com.intellij.testFramework.LightProjectDescriptor
 import org.jetbrains.kotlin.idea.j2k.IdeaJavaToKotlinServices
@@ -91,6 +95,11 @@ abstract class AbstractNewJavaToKotlinConverterSingleFileTest : AbstractJavaToKo
                     modificator.commitChanges()
                 }
                 return sdk
+            }
+
+            override fun configureModule(module: Module, model: ModifiableRootModel) {
+                super.configureModule(module, model)
+                model.getModuleExtension(LanguageLevelModuleExtension::class.java).languageLevel = LanguageLevel.JDK_1_8
             }
         }
 }

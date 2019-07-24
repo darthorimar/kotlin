@@ -6,32 +6,35 @@
 package org.jetbrains.kotlin.nj2k.inference.nullability
 
 import com.intellij.openapi.application.runWriteAction
-import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.projectRoots.SdkModificator
 import com.intellij.openapi.projectRoots.impl.JavaSdkImpl
 import com.intellij.openapi.util.io.FileUtil
+import com.intellij.psi.PsiComment
 import com.intellij.psi.codeStyle.JavaCodeStyleSettings
 import com.intellij.testFramework.LightProjectDescriptor
-import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
 import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
-import org.jetbrains.kotlin.idea.test.KotlinLightCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.idea.test.KotlinWithJdkAndRuntimeLightProjectDescriptor
+import org.jetbrains.kotlin.nj2k.inference.AbstractConstraintCollectorTest
 import org.jetbrains.kotlin.nj2k.inference.common.*
 import org.jetbrains.kotlin.nj2k.inference.common.collectors.CommonConstraintsCollector
 import org.jetbrains.kotlin.nj2k.inference.common.collectors.FunctionConstraintsCollector
+import org.jetbrains.kotlin.psi.KtConstructorCalleeExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtTypeElement
+import org.jetbrains.kotlin.psi.KtTypeReference
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
 import org.jetbrains.kotlin.test.InTextDirectivesUtils
-import org.jetbrains.kotlin.test.KotlinTestUtils
 import java.io.File
 
-abstract class AbstractNullabilityInferenceTest : KotlinLightCodeInsightFixtureTestCase() {
-    private fun createInferenceFacade(resolutionFacade: ResolutionFacade): InferenceFacade {
+abstract class AbstractNullabilityInferenceTest : AbstractConstraintCollectorTest() {
+    override fun createInferenceFacade(resolutionFacade: ResolutionFacade): InferenceFacade {
         val typeEnhancer = NullabilityBoundTypeEnhancer(resolutionFacade)
         return InferenceFacade(
-            TestContextCollector(resolutionFacade),
+            object : ContextCollector(resolutionFacade) {
+                override fun ClassReference.getState(typeElement: KtTypeElement?): State? =
+                    State.UNKNOWN
+            },
             ConstraintsCollectorAggregator(
                 resolutionFacade,
                 listOf(
@@ -40,33 +43,24 @@ abstract class AbstractNullabilityInferenceTest : KotlinLightCodeInsightFixtureT
                     NullabilityConstraintsCollector()
                 )
             ),
-            BoundTypeCalculator(resolutionFacade, typeEnhancer),
+            BoundTypeCalculatorImpl(resolutionFacade, typeEnhancer),
             NullabilityStateUpdater(),
-            isDebugMode = false
+            renderDebugTypes = true
         )
     }
 
-    fun doTest(path: String) {
-        val file = File(path)
-        val text = FileUtil.loadFile(file, true)
-        val ktFile = myFixture.configureByText("converterTestFile.kt", text) as KtFile
-        val resolutionFacade = ktFile.getResolutionFacade()
-        CommandProcessor.getInstance().runUndoTransparentAction {
-            ktFile.makeAllTypesNotNull()
-            createInferenceFacade(resolutionFacade).runOn(listOf(ktFile))
+    override fun KtFile.prepareFile() = runWriteAction {
+        fun KtTypeReference.updateNullability() {
+            NullabilityStateUpdater.changeState(typeElement ?: return, toNullable = true)
+            for (typeArgument in typeElement!!.typeArgumentsAsTypes) {
+                typeArgument.updateNullability()
+            }
         }
-        KotlinTestUtils.assertEqualsToFile(file, ktFile.text)
-    }
-
-
-    private fun KtFile.makeAllTypesNotNull() = runWriteAction {
-        for (typeElement in collectDescendantsOfType<KtTypeElement>()) {
-            NullabilityStateUpdater.changeState(typeElement, toNullable = false)
+        for (typeReference in collectDescendantsOfType<KtTypeReference>()) {
+            if (typeReference.parent is KtConstructorCalleeExpression) continue
+            typeReference.updateNullability()
         }
-    }
-
-    private class TestContextCollector(resolutionFacade: ResolutionFacade) : ContextCollector(resolutionFacade) {
-        override fun ClassReference.getState(typeElement: KtTypeElement?): State? = State.UNKNOWN
+        deleteComments()
     }
 
     override fun setUp() {

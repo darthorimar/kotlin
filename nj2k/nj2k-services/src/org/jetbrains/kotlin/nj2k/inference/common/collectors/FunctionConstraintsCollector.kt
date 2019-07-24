@@ -6,7 +6,6 @@
 package org.jetbrains.kotlin.nj2k.inference.common.collectors
 
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
-import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.TypeParameterDescriptor
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
 import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
@@ -26,46 +25,68 @@ class FunctionConstraintsCollector(
     override fun ConstraintBuilder.collectConstraints(
         element: KtElement,
         boundTypeCalculator: BoundTypeCalculator,
+        inferenceContext: InferenceContext,
         resolutionFacade: ResolutionFacade
-    ) = with(boundTypeCalculator) {
+    ) {
         if (element !is KtFunction) return
+        superFunctionsProvider.inferenceContext = inferenceContext
         val ktClass = element.containingClassOrObject ?: return
         val classDescriptor = ktClass.resolveToDescriptorIfAny(resolutionFacade) ?: return
-        val returnTypeVariable = element.typeReference?.typeElement?.let {
-            inferenceContext.typeElementToTypeVariable[it]
-        } ?: return
 
         val superFunctions = superFunctionsProvider.provideSuperFunctionDescriptors(element) ?: return
         val substitutor = inferenceContext.classSupstitutions[classDescriptor] ?: return
 
-
         for (superFunction in superFunctions) {
             val superClass = superFunction.containingDeclaration as? ClassDescriptor ?: continue
-            val superReturnType = superFunction.original.returnType ?: continue
+            val superFunctionPsi = superFunction.original.findPsi() as? KtNamedFunction
 
-            val usedTypeVariables = hashSetOf<TypeVariable>()
-            for ((typeElement, typeParameter) in calculateTypeSubstitution(
-                element.typeReference?.typeElement!!,
-                superReturnType
-            )) {
-                val superEntryTypeElement = substitutor[superClass, typeParameter] ?: continue
-                typeElement.isTheSameTypeAs(superEntryTypeElement, ConstraintPriority.SUPER_DECLARATION)
-
-                inferenceContext.typeElementToTypeVariable[typeElement]?.also { usedTypeVariables += it }
+            run {
+                collectTypeConstraints(
+                    element.typeReference?.typeElement ?: return@run,
+                    superFunction.original.returnType ?: return@run,
+                    superFunctionPsi?.typeReference?.typeElement,
+                    substitutor,
+                    superClass,
+                    inferenceContext
+                )
             }
 
-            val superFunctionPsi = superFunction.original.findPsi() as? KtNamedFunction
-            if (superFunctionPsi != null) {
-                val superReturnTypeVariable = superFunctionPsi.typeReference?.typeElement?.let {
-                    inferenceContext.typeElementToTypeVariable[it]
-                }
-                superReturnTypeVariable?.isTheSameTypeAs(
-                    returnTypeVariable,
-                    ConstraintPriority.SUPER_DECLARATION,
-                    usedTypeVariables
+            for (parameterIndex in element.valueParameters.indices) {
+                collectTypeConstraints(
+                    element.valueParameters.getOrNull(parameterIndex)?.typeReference?.typeElement ?: continue,
+                    superFunction.valueParameters.getOrNull(parameterIndex)?.original?.type ?: continue,
+                    superFunctionPsi?.valueParameters?.getOrNull(parameterIndex)?.typeReference?.typeElement,
+                    substitutor,
+                    superClass,
+                    inferenceContext
                 )
             }
         }
+    }
+
+    private fun ConstraintBuilder.collectTypeConstraints(
+        typeElement: KtTypeElement,
+        superType: KotlinType,
+        superTypeElement: KtTypeElement?,
+        substitutor: ClassSubstitutor,
+        superClass: ClassDescriptor,
+        inferenceContext: InferenceContext
+    ) {
+        val usedTypeVariables = hashSetOf<TypeVariable>()
+        for ((innerTypeElement, innerTypeParameter) in calculateTypeSubstitution(typeElement, superType)) {
+            val superEntryTypeElement = substitutor[superClass, innerTypeParameter] ?: continue
+            innerTypeElement.isTheSameTypeAs(superEntryTypeElement, ConstraintPriority.SUPER_DECLARATION)
+
+            inferenceContext.typeElementToTypeVariable[innerTypeElement]?.also { usedTypeVariables += it }
+        }
+        val superTypeVariable = superTypeElement?.let { inferenceContext.typeElementToTypeVariable[it] }
+        if (superTypeVariable != null) {
+            superTypeVariable.isTheSameTypeAs(typeElement, ConstraintPriority.SUPER_DECLARATION, usedTypeVariables)
+        } else {
+            superType.boundType(forceEnhance = true, inferenceContext = inferenceContext)
+                .isTheSameTypeAs(typeElement, ConstraintPriority.SUPER_DECLARATION, usedTypeVariables)
+        }
+
     }
 
     private fun calculateTypeSubstitution(
@@ -74,9 +95,10 @@ class FunctionConstraintsCollector(
     ): List<Pair<KtTypeElement, TypeParameterDescriptor>> {
         val subsitution = superType.constructor.declarationDescriptor
             ?.safeAs<TypeParameterDescriptor>()?.let { typeElement to it }
-        return typeElement.typeArgumentsAsTypes.zip(superType.arguments).flatMap { (argumentTypeElement, argumentType) ->
-            calculateTypeSubstitution(argumentTypeElement?.typeElement!!, argumentType.type)
-        } + listOfNotNull(subsitution)
+        return typeElement.typeArgumentsAsTypes.zip(superType.arguments)
+            .flatMap { (argumentTypeElement, argumentType) ->
+                calculateTypeSubstitution(argumentTypeElement?.typeElement!!, argumentType.type)
+            } + listOfNotNull(subsitution)
     }
 
 }

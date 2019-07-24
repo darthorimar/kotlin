@@ -13,7 +13,7 @@ import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 class ConstraintBuilder(
     private val inferenceContext: InferenceContext,
     private val boundTypeCalculator: BoundTypeCalculator
-) {
+) : BoundTypeCalculator by boundTypeCalculator {
     private val constraints = mutableListOf<Constraint>()
 
     fun TypeVariable.isSubtypeOf(supertype: BoundType, priority: ConstraintPriority) {
@@ -54,13 +54,43 @@ class ConstraintBuilder(
         asBoundType().isTheSameTypeAs(other.asBoundType(), priority, ignoreTypeVariables)
     }
 
-    fun KtTypeElement.isTheSameTypeAs(other: KtTypeElement, priority: ConstraintPriority) {
+    fun KtTypeElement.isTheSameTypeAs(
+        other: KtTypeElement,
+        priority: ConstraintPriority,
+        ignoreTypeVariables: Set<TypeVariable> = emptySet()
+    ) {
         inferenceContext.typeElementToTypeVariable[this]
             ?.asBoundType()
             ?.isTheSameTypeAs(
                 inferenceContext.typeElementToTypeVariable[other]?.asBoundType() ?: return,
-                priority
+                priority,
+                ignoreTypeVariables
             )
+    }
+
+
+    fun TypeVariable.isTheSameTypeAs(
+        other: KtTypeElement,
+        priority: ConstraintPriority,
+        ignoreTypeVariables: Set<TypeVariable> = emptySet()
+    ) {
+        asBoundType().isTheSameTypeAs(
+            inferenceContext.typeElementToTypeVariable[other]?.asBoundType() ?: return,
+            priority,
+            ignoreTypeVariables
+        )
+    }
+
+    fun BoundType.isTheSameTypeAs(
+        other: KtTypeElement,
+        priority: ConstraintPriority,
+        ignoreTypeVariables: Set<TypeVariable> = emptySet()
+    ) {
+        isTheSameTypeAs(
+            inferenceContext.typeElementToTypeVariable[other]?.asBoundType() ?: return,
+            priority,
+            ignoreTypeVariables
+        )
     }
 
     fun BoundType.isTheSameTypeAs(
@@ -97,7 +127,7 @@ class ConstraintBuilder(
         )
     }
 
-    private fun KtExpression.boundType() = with(boundTypeCalculator) {
+    fun KtExpression.boundType() = with(boundTypeCalculator) {
         this@boundType.boundType(inferenceContext)
     }
 

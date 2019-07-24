@@ -11,8 +11,8 @@ import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 sealed class ClassReference
-data class DescriptorClassReference(val descriptor: ClassDescriptor) : ClassReference()
-data class TypeParameterReference(val descriptor: TypeParameterDescriptor) : ClassReference()
+class DescriptorClassReference(val descriptor: ClassDescriptor) : ClassReference()
+class TypeParameterReference(val descriptor: TypeParameterDescriptor) : ClassReference()
 object NoClassReference : ClassReference()
 
 val ClassDescriptor.classReference: DescriptorClassReference
@@ -21,19 +21,26 @@ val ClassDescriptor.classReference: DescriptorClassReference
 val ClassReference.descriptor: ClassDescriptor?
     get() = safeAs<DescriptorClassReference>()?.descriptor
 
-data class TypeParameter(val boundType: BoundType, val variance: Variance)
+class TypeParameter(val boundType: BoundType, val variance: Variance)
 
 sealed class BoundType {
     abstract val label: BoundTypeLabel
     abstract val typeParameters: List<TypeParameter>
+
+    companion object {
+        val LITERAL = BoundTypeImpl(LiteralLabel, emptyList())
+        val STAR_PROJECTION = BoundTypeImpl(StarProjectionLabel, emptyList())
+        val NULL = BoundTypeImpl(NullLiteralLabel, emptyList())
+    }
 }
 
-data class BoundTypeImpl(
+class BoundTypeImpl(
     override val label: BoundTypeLabel,
     override val typeParameters: List<TypeParameter>
 ) : BoundType()
 
-data class WithForcedStateBoundType(
+
+class WithForcedStateBoundType(
     val original: BoundType,
     val forcedState: State
 ) : BoundType() {
@@ -45,22 +52,21 @@ data class WithForcedStateBoundType(
 
 fun BoundType.withEnhancementFrom(from: BoundType) = when (from) {
     is BoundTypeImpl -> this
-    is WithForcedStateBoundType ->
-        WithForcedStateBoundType(
-            this,
-            from.forcedState
-        )
+    is WithForcedStateBoundType -> WithForcedStateBoundType(this, from.forcedState)
 }
 
+fun BoundType.enhanceWith(state: State?) =
+    if (state != null) WithForcedStateBoundType(this, state)
+    else this
 
 sealed class BoundTypeLabel
 
-data class TypeVariableLabel(val typeVariable: TypeVariable) : BoundTypeLabel()
-data class TypeParameterLabel(val typeParameter: TypeParameterDescriptor) : BoundTypeLabel()
-data class GenericLabel(val classReference: ClassReference) : BoundTypeLabel()
+class TypeVariableLabel(val typeVariable: TypeVariable) : BoundTypeLabel()
+class TypeParameterLabel(val typeParameter: TypeParameterDescriptor) : BoundTypeLabel()
+class GenericLabel(val classReference: ClassReference) : BoundTypeLabel()
 object NullLiteralLabel : BoundTypeLabel()
 object LiteralLabel : BoundTypeLabel()
-object StarProjectionlLabel : BoundTypeLabel()
+object StarProjectionLabel : BoundTypeLabel()
 
 
 fun TypeVariable.asBoundType(): BoundType =
@@ -68,4 +74,7 @@ fun TypeVariable.asBoundType(): BoundType =
 
 val BoundType.typeVariable: TypeVariable?
     get() = label.safeAs<TypeVariableLabel>()?.typeVariable
+
+val BoundType.isReferenceToClass: Boolean
+    get() = label is TypeVariableLabel || label is GenericLabel
 

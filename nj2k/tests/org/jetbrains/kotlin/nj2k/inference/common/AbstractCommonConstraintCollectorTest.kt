@@ -25,10 +25,10 @@ abstract class AbstractCommonConstraintCollectorTest : AbstractConstraintCollect
                     FunctionConstraintsCollector(ResolveSuperFunctionsProvider(resolutionFacade))
                 )
             ),
-            BoundTypeCalculator(resolutionFacade, BoundTypeEnhancer.ID),
+            BoundTypeCalculatorImpl(resolutionFacade, BoundTypeEnhancer.ID),
             object : StateUpdater() {
                 override fun updateStates(inferenceContext: InferenceContext) {}
             },
-            isDebugMode = true
+            renderDebugTypes = true
         )
 }

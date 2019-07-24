@@ -20,6 +20,7 @@ import org.jetbrains.kotlin.j2k.ast.Nullability
 import org.jetbrains.kotlin.nj2k.symbols.JKClassSymbol
 import org.jetbrains.kotlin.nj2k.symbols.JKTypeParameterSymbol
 import org.jetbrains.kotlin.nj2k.tree.impl.JKBranchElementBase
+import org.jetbrains.kotlin.nj2k.tree.impl.JKClassTypeImpl
 import org.jetbrains.kotlin.resolve.jvm.JvmPrimitiveType
 import kotlin.jvm.internal.CallableReference
 import kotlin.reflect.KProperty0
@@ -57,9 +58,6 @@ interface JKBranchElement : JKElement {
 interface JKType {
     val nullability: Nullability
 }
-
-fun JKType.isNullable(): Boolean =
-    nullability != Nullability.NotNull
 
 interface JKVarianceTypeParameterType : JKType {
     val variance: Variance

@@ -41,8 +41,8 @@ val formatCodeProcessing =
 
 val nullabilityProcessing =
     postProcessing { file, rangeMarker, converterContext ->
+        if (rangeMarker != null) TODO("RANGE MARKER!!")
         val resolutionFacade = file.getResolutionFacade()
-        val typeEnhancer = NullabilityBoundTypeEnhancer(resolutionFacade)
 
         val inferenceFacade = InferenceFacade(
             NullabilityContextCollector(resolutionFacade, converterContext),
@@ -54,9 +54,9 @@ val nullabilityProcessing =
                     NullabilityConstraintsCollector()
                 )
             ),
-            BoundTypeCalculator(resolutionFacade, typeEnhancer),
+            BoundTypeCalculatorImpl(resolutionFacade, NullabilityBoundTypeEnhancer(resolutionFacade)),
             NullabilityStateUpdater(),
-            isDebugMode = false
+            renderDebugTypes = false
         )
         inferenceFacade.runOn(listOf(file))
     }

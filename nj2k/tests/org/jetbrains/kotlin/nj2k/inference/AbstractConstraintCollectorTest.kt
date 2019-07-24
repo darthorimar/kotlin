@@ -26,10 +26,22 @@ abstract class AbstractConstraintCollectorTest : KotlinLightCodeInsightFixtureTe
         val ktFile = myFixture.configureByText("converterTestFile.kt", text) as KtFile
         val resolutionFacade = ktFile.getResolutionFacade()
         CommandProcessor.getInstance().runUndoTransparentAction {
-            ktFile.deleteAllComment()
+            ktFile.prepareFile()
             createInferenceFacade(resolutionFacade).runOn(listOf(ktFile))
         }
         KotlinTestUtils.assertEqualsToFile(file, ktFile.text)
+    }
+
+    open fun KtFile.prepareFile() = runWriteAction {
+        deleteComments()
+    }
+
+    fun KtFile.deleteComments() {
+        for (comment in collectDescendantsOfType<PsiComment>()) {
+            if (!comment.text.startsWith("// RUNTIME_WITH_FULL_JDK")) {
+                comment.delete()
+            }
+        }
     }
 
     abstract fun createInferenceFacade(resolutionFacade: ResolutionFacade): InferenceFacade
@@ -37,9 +49,4 @@ abstract class AbstractConstraintCollectorTest : KotlinLightCodeInsightFixtureTe
     override fun getProjectDescriptor() =
         KotlinWithJdkAndRuntimeLightProjectDescriptor.INSTANCE
 
-    private fun KtFile.deleteAllComment() = runWriteAction {
-        for (comment in collectDescendantsOfType<PsiComment>()) {
-            comment.delete()
-        }
-    }
 }

@@ -22,18 +22,16 @@ class ConstraintsCollectorAggregator(
         inferenceContext: InferenceContext,
         elements: List<KtElement>
     ): List<Constraint> {
-        for (collector in collectors) {
-            collector.inferenceContext = inferenceContext
-        }
         val constraintsBuilder = ConstraintBuilder(inferenceContext, boundTypeCalculator)
         for (element in elements) {
             element.forEachDescendantOfType<KtElement> { innerElement ->
                 if (innerElement.parentOfType<KtImportDirective>() != null) return@forEachDescendantOfType
-                collectors.forEach { collector ->
+                for (collector in collectors) {
                     with(collector) {
                         constraintsBuilder.collectConstraints(
                             innerElement,
                             boundTypeCalculator,
+                            inferenceContext,
                             resolutionFacade
                         )
                     }

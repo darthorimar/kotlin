@@ -14,16 +14,17 @@ class InferenceFacade(
     private val constraintsCollectorAggregator: ConstraintsCollectorAggregator,
     private val boundTypeCalculator: BoundTypeCalculator,
     private val stateUpdater: StateUpdater,
-    private val isDebugMode: Boolean
+    private val renderDebugTypes: Boolean = false,
+    private val printDebugConstraints: Boolean = false
 ) {
     fun runOn(elements: List<KtElement>) {
         val inferenceContext = typeVariablesCollector.collectTypeVariables(elements)
         val constraints = constraintsCollectorAggregator.collectConstraints(boundTypeCalculator, inferenceContext, elements)
 
-        val initialConstraints = if (isDebugMode) constraints.map { it.copy() } else null
-        Solver(inferenceContext, true).solveConstraints(constraints)
+        val initialConstraints = if (renderDebugTypes) constraints.map { it.copy() } else null
+        Solver(inferenceContext, printDebugConstraints).solveConstraints(constraints)
 
-        if (isDebugMode) {
+        if (renderDebugTypes) {
             with(DebugPrinter(inferenceContext)) {
                 runWriteAction {
                     for ((expression, boundType) in boundTypeCalculator.expressionsWithBoundType()) {

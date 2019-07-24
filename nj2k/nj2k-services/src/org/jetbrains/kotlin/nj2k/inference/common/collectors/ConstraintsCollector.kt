@@ -15,8 +15,7 @@ abstract class ConstraintsCollector {
     abstract fun ConstraintBuilder.collectConstraints(
         element: KtElement,
         boundTypeCalculator: BoundTypeCalculator,
+        inferenceContext: InferenceContext,
         resolutionFacade: ResolutionFacade
     )
-
-    lateinit var inferenceContext: InferenceContext
 }

@@ -10,18 +10,14 @@ import org.jetbrains.kotlin.nj2k.callOn
 import org.jetbrains.kotlin.nj2k.isCallOf
 import org.jetbrains.kotlin.nj2k.symbols.deepestFqName
 import org.jetbrains.kotlin.nj2k.tree.*
-import org.jetbrains.kotlin.nj2k.tree.impl.JKKtCallExpressionImpl
-import org.jetbrains.kotlin.nj2k.tree.impl.JKKtQualifierImpl
-import org.jetbrains.kotlin.nj2k.tree.impl.JKNoTypeImpl
-import org.jetbrains.kotlin.nj2k.tree.impl.JKQualifiedExpressionImpl
+import org.jetbrains.kotlin.nj2k.tree.impl.*
 import org.jetbrains.kotlin.utils.addToStdlib.cast
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
-import kotlin.contracts.ExperimentalContracts
-import kotlin.contracts.contract
 
 
 class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : RecursiveApplicableConversionBase() {
     override fun applyToElement(element: JKTreeElement): JKTreeElement {
+        return recurse(element)
         if (element !is JKQualifiedExpression) return recurse(element)
         if (element.selector.asCollectStreamCall() == null) recurse(element)
         val unwrapped = element.unwrap()
@@ -38,7 +34,7 @@ class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : Rec
             operation.asOperationCall() ?: return null
         }
 
-        return StreamCallSequence(createStream, operations, collectStream)
+        return StreamCallSequence(createStream.streamType ?: JKNoTypeImpl, createStream, operations, collectStream)
     }
 
     private fun JKExpression.asOperationCall(): Operation? {
@@ -46,7 +42,7 @@ class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : Rec
         val type = operationsConversionByFqName[identifier.deepestFqName()]
             ?.firstOrNull { it.javaArgumentsCount == arguments.arguments.size }
             ?: return null
-        return Operation(type, arguments, typeArgumentList, this)
+        return Operation(type, arguments, typeArgumentList)
     }
 
     private fun JKExpression.asCreateStreamCall(): CreateStream? {
@@ -55,7 +51,7 @@ class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : Rec
         val type = createStreamByFqName[call.identifier.deepestFqName()]
             ?.firstOrNull { it.takeIf(call) }
             ?: return null
-        return CreateStream(type, receiver, call, this)
+        return CreateStream(type, receiver, call)
     }
 
     private fun JKExpression.asCollectStreamCall(): CollectStream? {
@@ -63,23 +59,23 @@ class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : Rec
         val type = collectStreamFqName[identifier.deepestFqName()]
             ?.firstOrNull { it.takeIf(this) }
             ?: return null
-        return CollectStream(type, this, this)
+        return CollectStream(type, this)
     }
 
     private fun StreamCallSequence.applyConversion(originalQualifiedExpression: JKQualifiedExpression): JKExpression {
-        val createStreamKt = createStream.type
+        val createStreamKt = createStream.kind
             .toKotlin(
                 createStream.receiver.detached(),
                 createStream.call.detached()
-            )//.withNonCodeElementsFromWithParent(createStream.prototype)
+            )
         val operationsKt = operations.map { operation ->
             JKKtCallExpressionImpl(
-                provideMethodSymbol(operation.type.kotlinFqName),
+                provideMethodSymbol(operation.kind.kotlinFqName),
                 operation.arguments.detached().cleanFunctionalTypeLambdaArguments(),
                 typeArgumentList = operation.typeArguments.detached()
             )
         }
-        val collectorKt = collectStream.type.toKotlin(collectStream.call.detached())
+        val collectorKt = collectStream.kind.toKotlin(collectStream.call.detached(), streamType)
         return (listOf(createStreamKt) + operationsKt + collectorKt)
             .toQualifiedSequence()
             .also { it.takeStructureFrom(originalQualifiedExpression) }
@@ -119,54 +115,56 @@ class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : Rec
             JKQualifiedExpressionImpl(receiver, JKKtQualifierImpl.DOT, selector)
         }
 
-    private data class StreamCallSequence(
+    private class StreamCallSequence(
+        val streamType: JKType,
         val createStream: CreateStream,
         val operations: List<Operation>,
         val collectStream: CollectStream
     )
 
-    private data class Operation(
-        val type: OperationType,
+    private class Operation(
+        val kind: OperationKind,
         val arguments: JKArgumentList,
-        val typeArguments: JKTypeArgumentList,
-        val prototype: JKExpression
+        val typeArguments: JKTypeArgumentList
     )
 
-    private data class CreateStream(
-        val type: CreateStreamType,
+    private class CreateStream(
+        val kind: CreateStreamKind,
         val receiver: JKExpression,
-        val call: JKMethodCallExpression,
-        val prototype: JKExpression
+        val call: JKMethodCallExpression
+    ) {
+        val streamType
+            get() = kind.streamType(receiver, call)
+    }
+
+    private class CollectStream(
+        val kind: CollectStreamKind,
+        val call: JKMethodCallExpression
     )
 
-    private data class CollectStream(
-        val type: CollectStreamType,
-        val call: JKMethodCallExpression,
-        val prototype: JKExpression
-    )
-
-    private data class OperationType(
+    private class OperationKind(
         val javaFqName: String,
         val kotlinFqName: String,
         val javaArgumentsCount: Int
     )
 
-    private data class CreateStreamType(
+    private class CreateStreamKind(
         val javaFqName: String,
         val takeIf: (JKMethodCallExpression) -> Boolean,
-        val toKotlin: (JKExpression, JKMethodCallExpression) -> JKExpression
+        val toKotlin: (JKExpression, JKMethodCallExpression) -> JKExpression,
+        val streamType: (JKExpression, JKMethodCallExpression) -> JKType?
     )
 
-    private interface CollectStreamType {
+    private interface CollectStreamKind {
         val javaFqName: String
         val takeIf: (JKMethodCallExpression) -> Boolean
-        val toKotlin: (JKMethodCallExpression) -> JKExpression
+        val toKotlin: (JKMethodCallExpression, JKType) -> JKExpression
     }
 
-    private data class CollectStreamTypeByCallingCollect(
+    private class CollectStreamTypeByCallingCollect(
         val collectorFqName: String,
-        val collectorToKotlin: (JKExpression) -> JKExpression
-    ) : CollectStreamType {
+        val collectorToKotlin: (JKExpression, JKType) -> JKExpression
+    ) : CollectStreamKind {
         override val javaFqName = "java.util.stream.Stream.collect"
 
         override val takeIf = { call: JKMethodCallExpression ->
@@ -176,64 +174,63 @@ class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : Rec
             } == true
         }
 
-        override val toKotlin = { call: JKMethodCallExpression ->
-            collectorToKotlin(call.arguments.arguments.single().value)
+        override val toKotlin = { call: JKMethodCallExpression, streamType: JKType ->
+            collectorToKotlin(call.arguments.arguments.single().value, streamType)
         }
     }
 
-    private data class CollectStreamTypeImpl(
+    private class CollectStreamKindImpl(
         override val javaFqName: String,
         override val takeIf: (JKMethodCallExpression) -> Boolean,
-        override val toKotlin: (JKMethodCallExpression) -> JKExpression
-    ) : CollectStreamType
+        override val toKotlin: (JKMethodCallExpression, JKType) -> JKExpression
+    ) : CollectStreamKind
 
 
     private val operationsConversionByFqName = listOf(
-        OperationType(
+        OperationKind(
             javaFqName = "java.util.stream.Stream.filter",
             kotlinFqName = "kotlin.collections.filter",
             javaArgumentsCount = 1
         ),
-        OperationType(
+        OperationKind(
             javaFqName = "java.util.stream.Stream.map",
             kotlinFqName = "kotlin.collections.map",
             javaArgumentsCount = 1
         ),
-        OperationType(
+        OperationKind(
             javaFqName = "java.util.stream.Stream.distinct",
             kotlinFqName = "kotlin.collections.distinct",
             javaArgumentsCount = 0
         ),
-        OperationType(
+        OperationKind(
             javaFqName = "java.util.stream.Stream.sorted",
             kotlinFqName = "kotlin.collections.sorted",
             javaArgumentsCount = 0
         ),
-        OperationType(
+        OperationKind(
             javaFqName = "java.util.stream.Stream.sorted",
             kotlinFqName = "kotlin.collections.sortedWith",
             javaArgumentsCount = 1
         ),
-        OperationType(
+        OperationKind(
             javaFqName = "java.util.stream.Stream.peek",
             kotlinFqName = "kotlin.collections.onEach",
             javaArgumentsCount = 1
         ),
-        OperationType(
+        OperationKind(
             javaFqName = "java.util.stream.Stream.limit",
             kotlinFqName = "kotlin.collections.take",
             javaArgumentsCount = 1
         ),
-        OperationType(
+        OperationKind(
             javaFqName = "java.util.stream.Stream.skip",
             kotlinFqName = "kotlin.collections.drop",
             javaArgumentsCount = 1
         )
     ).groupBy { it.javaFqName }
 
-
     private val createStreamByFqName = listOf(
-        CreateStreamType(
+        CreateStreamKind(
             javaFqName = "java.util.Collection.stream",
             takeIf = { argument -> argument.arguments.arguments.isEmpty() },
             toKotlin = { receiver, call ->
@@ -241,9 +238,12 @@ class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : Rec
                     provideMethodSymbol("kotlin.collections.asSequence"),
                     typeArguments = call::typeArgumentList.detached()
                 )
+            },
+            streamType = { receiver, _ ->
+                receiver.type(context.symbolProvider)?.safeAs<JKParametrizedType>()?.parameters?.singleOrNull()
             }
         ),
-        CreateStreamType(
+        CreateStreamKind(
             javaFqName = "java.util.stream.Stream.of",
             takeIf = { argument ->
                 argument.arguments.arguments.firstOrNull()?.value?.type(context.symbolProvider)?.isArrayType() != true
@@ -254,10 +254,13 @@ class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : Rec
                     arguments = call::arguments.detached(),
                     typeArgumentList = call::typeArgumentList.detached()
                 )
+            },
+            streamType = { _, call ->
+                call.typeArgumentList.typeArguments.singleOrNull()?.type
             }
         ),
 
-        CreateStreamType(
+        CreateStreamKind(
             javaFqName = "java.util.stream.Stream.of",
             takeIf = { argument ->
                 argument.arguments.arguments.singleOrNull()?.value?.safeAs<JKPrefixExpression>()?.operator?.token?.text == "*"
@@ -265,9 +268,12 @@ class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : Rec
             toKotlin = { _, call ->
                 val array = call.arguments.arguments.single().value.cast<JKPrefixExpression>()::expression.detached()
                 array.callOn(provideMethodSymbol("kotlin.collections.asSequence"))
+            },
+            streamType = { _, call ->
+                call.typeArgumentList.typeArguments.singleOrNull()?.type
             }
         ),
-        CreateStreamType(
+        CreateStreamKind(
             javaFqName = "java.util.Arrays.stream",
             takeIf = { argument ->
                 argument.arguments.arguments.singleOrNull()?.value?.type(context.symbolProvider)?.isArrayType() == true
@@ -275,9 +281,12 @@ class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : Rec
             toKotlin = { _, call ->
                 val array = call.arguments.arguments.single()::value.detached()
                 array.callOn(provideMethodSymbol("kotlin.collections.asSequence"))
+            },
+            streamType = { _, call ->
+                call.typeArgumentList.typeArguments.singleOrNull()?.type
             }
         ),
-        CreateStreamType(
+        CreateStreamKind(
             javaFqName = "java.util.stream.Stream.iterate",
             takeIf = { argument ->
                 argument.arguments.arguments.size == 2
@@ -288,9 +297,12 @@ class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : Rec
                     arguments = call::arguments.detached().cleanFunctionalTypeLambdaArguments(),
                     typeArgumentList = call::typeArgumentList.detached()
                 )
+            },
+            streamType = { _, call ->
+                call.typeArgumentList.typeArguments.singleOrNull()?.type
             }
         ),
-        CreateStreamType(
+        CreateStreamKind(
             javaFqName = "java.util.stream.Stream.generate",
             takeIf = { argument ->
                 argument.arguments.arguments.size == 1
@@ -301,6 +313,9 @@ class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : Rec
                     arguments = call::arguments.detached().cleanFunctionalTypeLambdaArguments(),
                     typeArgumentList = call::typeArgumentList.detached()
                 )
+            },
+            streamType = { _, call ->
+                call.typeArgumentList.typeArguments.singleOrNull()?.type
             }
         )
 
@@ -309,71 +324,63 @@ class JavaStreamApiConversion(private val context: NewJ2kConverterContext) : Rec
     private val collectStreamFqName = listOf(
         CollectStreamTypeByCallingCollect(
             collectorFqName = "java.util.stream.Collectors.toList",
-            collectorToKotlin = {
-                JKKtCallExpressionImpl(
-                    provideMethodSymbol("kotlin.collections.toList")
-                )
+            collectorToKotlin = { call, streamType ->
+                call.toKotlinCollector("kotlin.collections.toList", streamType)
             }
         ),
         CollectStreamTypeByCallingCollect(
             collectorFqName = "java.util.stream.Collectors.toSet",
-            collectorToKotlin = {
-                JKKtCallExpressionImpl(
-                    provideMethodSymbol("kotlin.collections.toSet")
-                )
+            collectorToKotlin = { call, streamType ->
+                call.toKotlinCollector("kotlin.collections.toSet", streamType)
             }
         ),
-        CollectStreamTypeImpl(
+        CollectStreamKindImpl(
             javaFqName = "java.util.stream.Stream.count",
             takeIf = { it.arguments.arguments.isEmpty() },
-            toKotlin = {
-                JKKtCallExpressionImpl(
-                    provideMethodSymbol("kotlin.collections.count")
-                )
+            toKotlin = { call, streamType ->
+                call.toKotlinCollector("kotlin.collections.count", streamType)
             }
-
         ),
-        CollectStreamTypeImpl(
+        CollectStreamKindImpl(
             javaFqName = "java.util.stream.Stream.anyMatch",
             takeIf = { it.arguments.arguments.size == 1 },
-            toKotlin = { call ->
-                JKKtCallExpressionImpl(
-                    provideMethodSymbol("kotlin.collections.any"),
-                    arguments = call.arguments.detached().cleanFunctionalTypeLambdaArguments()
-                )
+            toKotlin = { call, streamType ->
+                call.toKotlinCollector("kotlin.collections.any", streamType)
             }
         ),
-        CollectStreamTypeImpl(
+        CollectStreamKindImpl(
             javaFqName = "java.util.stream.Stream.allMatch",
             takeIf = { it.arguments.arguments.size == 1 },
-            toKotlin = { call ->
-                JKKtCallExpressionImpl(
-                    provideMethodSymbol("kotlin.collections.all"),
-                    arguments = call.arguments.detached().cleanFunctionalTypeLambdaArguments()
-                )
+            toKotlin = { call, streamType ->
+                call.toKotlinCollector("kotlin.collections.all", streamType)
             }
         ),
-        CollectStreamTypeImpl(
+        CollectStreamKindImpl(
             javaFqName = "java.util.stream.Stream.noneMatch",
             takeIf = { it.arguments.arguments.size == 1 },
-            toKotlin = { call ->
-                JKKtCallExpressionImpl(
-                    provideMethodSymbol("kotlin.collections.none"),
-                    arguments = call.arguments.detached().cleanFunctionalTypeLambdaArguments()
-                )
+            toKotlin = { call, streamType ->
+                call.toKotlinCollector("kotlin.collections.none", streamType)
             }
         ),
-        CollectStreamTypeImpl(
+        CollectStreamKindImpl(
             javaFqName = "java.util.stream.Stream.forEach",
             takeIf = { it.arguments.arguments.size == 1 },
-            toKotlin = { call ->
-                JKKtCallExpressionImpl(
-                    provideMethodSymbol("kotlin.collections.forEach"),
-                    arguments = call.arguments.detached().cleanFunctionalTypeLambdaArguments()
-                )
+            toKotlin = { call, streamType ->
+                call.toKotlinCollector("kotlin.collections.forEach", streamType)
             }
         )
     ).groupBy { it.javaFqName }
 
-
+    private fun JKExpression.toKotlinCollector(
+        kotlinFqName: String,
+        streamType: JKType
+    ) =
+        JKKtCallExpressionImpl(
+            provideMethodSymbol(kotlinFqName),
+            arguments = safeAs<JKMethodCallExpression>()
+                ?.arguments
+                ?.detached()
+                ?.cleanFunctionalTypeLambdaArguments()
+                ?: JKArgumentListImpl()
+        )
 }

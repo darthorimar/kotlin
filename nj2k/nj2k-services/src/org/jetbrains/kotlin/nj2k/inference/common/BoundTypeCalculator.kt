@@ -6,10 +6,7 @@
 package org.jetbrains.kotlin.nj2k.inference.common
 
 import org.jetbrains.kotlin.KtNodeTypes
-import org.jetbrains.kotlin.descriptors.ClassDescriptor
-import org.jetbrains.kotlin.descriptors.ConstructorDescriptor
-import org.jetbrains.kotlin.descriptors.FunctionDescriptor
-import org.jetbrains.kotlin.descriptors.TypeParameterDescriptor
+import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.idea.caches.resolve.analyze
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.isNullExpression
@@ -23,24 +20,43 @@ import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.types.typeUtil.builtIns
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
+import kotlin.reflect.jvm.jvmName
 
-class BoundTypeCalculator(private val resolutionFacade: ResolutionFacade, private val enhancer: BoundTypeEnhancer) {
+interface BoundTypeCalculator {
+    fun expressionsWithBoundType(): List<Pair<KtExpression, BoundType>>
+
+    fun KtExpression.boundType(inferenceContext: InferenceContext): BoundType
+
+    fun KotlinType.boundType(
+        typeVariable: TypeVariable? = null,
+        contextBoundType: BoundType? = null,
+        call: ResolvedCall<*>? = null,
+        isImplicitReceiver: Boolean = false,
+        forceEnhance: Boolean = false,
+        inferenceContext: InferenceContext
+    ): BoundType
+}
+
+class BoundTypeCalculatorImpl(
+    private val resolutionFacade: ResolutionFacade,
+    private val enhancer: BoundTypeEnhancer
+) : BoundTypeCalculator {
     private val cache = mutableMapOf<KtExpression, BoundType>()
 
-    fun expressionsWithBoundType() = cache.toList()
+    override fun expressionsWithBoundType() = cache.toList()
 
-    fun KtExpression.boundType(inferenceContext: InferenceContext): BoundType = cache.getOrPut(this) {
+    override fun KtExpression.boundType(inferenceContext: InferenceContext): BoundType = cache.getOrPut(this) {
         calculateBoundType(inferenceContext, this)
     }
 
     private fun calculateBoundType(inferenceContext: InferenceContext, expression: KtExpression): BoundType = when {
-        expression.isNullExpression() -> BoundTypeImpl(NullLiteralLabel, emptyList())
+        expression.isNullExpression() -> BoundType.NULL
         expression is KtParenthesizedExpression -> expression.expression?.boundType(inferenceContext)
         expression is KtConstantExpression
                 || expression is KtStringTemplateExpression
                 || expression.node?.elementType == KtNodeTypes.BOOLEAN_CONSTANT
                 || expression is KtBinaryExpression ->
-            BoundTypeImpl(LiteralLabel, emptyList())
+            BoundType.LITERAL
         expression is KtQualifiedExpression -> expression.toBoundTypeAsQualifiedExpression(inferenceContext)
         expression is KtBinaryExpressionWithTypeRHS -> expression.toBoundTypeAsCastExpression(inferenceContext)
         expression is KtNameReferenceExpression -> expression.toBoundTypeAsReferenceExpression(inferenceContext)
@@ -51,15 +67,14 @@ class BoundTypeCalculator(private val resolutionFacade: ResolutionFacade, privat
         else -> null
     }?.let { boundType ->
         enhancer.enhance(expression, boundType, inferenceContext)
-    } ?: BoundTypeImpl(LiteralLabel, emptyList())
-    ?: TODO(expression::class.toString() + "\n" + expression.text)
+    } ?: BoundType.LITERAL
 
     private fun KtIfExpression.toBoundTypeAsIfExpression(inferenceContext: InferenceContext): BoundType? {
         val isNullLiteralPossible = then?.isNullExpression() == true || `else`?.isNullExpression() == true
         if (isNullLiteralPossible) {
-            return BoundTypeImpl(NullLiteralLabel, emptyList())
+            return BoundType.NULL
         }
-        return (then ?: `else`)?.boundType(inferenceContext)//TODO()
+        return (then ?: `else`)?.boundType(inferenceContext) //TODO handle both cases separatelly
     }
 
     private fun KtLambdaExpression.toBoundTypeAsLambdaExpression(inferenceContext: InferenceContext): BoundType? {
@@ -76,7 +91,7 @@ class BoundTypeCalculator(private val resolutionFacade: ResolutionFacade, privat
             }
         } else {
             descriptor.valueParameters.map { parameter ->
-                parameter.type.boundType(null, null, null, false, inferenceContext)
+                parameter.type.boundType(inferenceContext = inferenceContext)
             }
         }
         val returnTypeTypeVariable = inferenceContext.declarationToTypeVariable[functionLiteral] ?: return null
@@ -98,8 +113,23 @@ class BoundTypeCalculator(private val resolutionFacade: ResolutionFacade, privat
         mainReference
             .resolve()
             ?.safeAs<KtDeclaration>()
-            ?.let {
-                inferenceContext.declarationToTypeVariable[it]?.asBoundType()
+            ?.let { declaration ->
+                val boundType = inferenceContext.declarationToTypeVariable[declaration]?.asBoundType()
+                    ?: return@let null
+                if (declaration.safeAs<KtParameter>()?.isVarArg == true) {
+                    val arrayClassReference =
+                        declaration.resolveToDescriptorIfAny(resolutionFacade)
+                            ?.safeAs<ValueParameterDescriptor>()
+                            ?.returnType
+                            ?.constructor
+                            ?.declarationDescriptor
+                            ?.safeAs<ClassDescriptor>()
+                            ?.classReference ?: NoClassReference
+                    BoundTypeImpl(
+                        GenericLabel(arrayClassReference),
+                        listOf(TypeParameter(boundType, Variance.INVARIANT))
+                    )
+                } else boundType
             }
 
 
@@ -116,13 +146,14 @@ class BoundTypeCalculator(private val resolutionFacade: ResolutionFacade, privat
         val withImplicitContextBoundType = contextBoundType
             ?: call.dispatchReceiver
                 ?.type
-                ?.boundType(null, null, null, false, inferenceContext)
+                ?.boundType(inferenceContext = inferenceContext)
 
         return returnType.boundType(
             returnTypeVariable,
             withImplicitContextBoundType,
             call,
             withImplicitContextBoundType != contextBoundType,
+            false,
             inferenceContext
         )
     }
@@ -133,11 +164,12 @@ class BoundTypeCalculator(private val resolutionFacade: ResolutionFacade, privat
         return selectorExpression.toBoundTypeAsCallableExpression(receiverBoundType, inferenceContext)
     }
 
-    fun KotlinType.boundType(
-        typeVariable: TypeVariable? = null,
-        contextBoundType: BoundType? = null,
-        call: ResolvedCall<*>? = null,
-        isImplicitReceiver: Boolean = false,
+    override fun KotlinType.boundType(
+        typeVariable: TypeVariable?,
+        contextBoundType: BoundType?,
+        call: ResolvedCall<*>?,
+        isImplicitReceiver: Boolean,
+        forceEnhance: Boolean,
         inferenceContext: InferenceContext
     ) = boundTypeUnenhanced(
         typeVariable,
@@ -145,11 +177,16 @@ class BoundTypeCalculator(private val resolutionFacade: ResolutionFacade, privat
         call,
         isImplicitReceiver,
         inferenceContext
-    ).let { boundType ->
-        if (!inferenceContext.isInConversionScope(call?.call?.calleeExpression?.mainReference?.resolve() ?: return@let boundType))
-            enhancer.enhanceKotlinType(this, boundType, inferenceContext)
+    )?.let { boundType ->
+        val needEnhance = run {
+            if (forceEnhance) return@run true
+            !inferenceContext.isInConversionScope(
+                call?.call?.calleeExpression?.mainReference?.resolve() ?: return@run false
+            )
+        }
+        if (needEnhance) enhancer.enhanceKotlinType(this, boundType, forceEnhance, inferenceContext)
         else boundType
-    }
+    } ?: BoundType.LITERAL
 
     private fun KotlinType.boundTypeUnenhanced(
         typeVariable: TypeVariable?,
@@ -157,59 +194,61 @@ class BoundTypeCalculator(private val resolutionFacade: ResolutionFacade, privat
         call: ResolvedCall<*>?,
         isImplicitReceiver: Boolean,
         inferenceContext: InferenceContext
-    ): BoundType = when (val target = constructor.declarationDescriptor) {
-        is ClassDescriptor ->
-            BoundTypeImpl(
-                typeVariable?.let { TypeVariableLabel(it) } ?: GenericLabel(target.classReference),
-                arguments.mapIndexed { i, argument ->
-                    TypeParameter(
-                        argument.type.boundTypeUnenhanced(
-                            typeVariable?.typeParameters?.get(i)?.boundType?.label?.safeAs<TypeVariableLabel>()?.typeVariable,
-                            contextBoundType,
-                            call,
-                            isImplicitReceiver,
-                            inferenceContext
-                        ),
-                        constructor.parameters[i].variance
-                    )
-                }
-            )
+    ): BoundType? {
+        return when (val target = constructor.declarationDescriptor) {
+            is ClassDescriptor ->
+                BoundTypeImpl(
+                    typeVariable?.let { TypeVariableLabel(it) } ?: GenericLabel(target.classReference),
+                    arguments.mapIndexed { i, argument ->
+                        TypeParameter(
+                            argument.type.boundTypeUnenhanced(
+                                typeVariable?.typeParameters?.get(i)?.boundType?.label?.safeAs<TypeVariableLabel>()?.typeVariable,
+                                contextBoundType,
+                                call,
+                                isImplicitReceiver,
+                                inferenceContext
+                            ) ?: return null,
+                            constructor.parameters[i].variance
+                        )
+                    }
+                )
 
-        is TypeParameterDescriptor -> {
-            val containingDeclaration = target.containingDeclaration
-            when {
-                containingDeclaration == call?.candidateDescriptor -> {
-                    val returnTypeVariable = inferenceContext.typeElementToTypeVariable[
-                            call.call.typeArguments[target.index].typeReference?.typeElement
-                    ]!!
-                    BoundTypeImpl(
-                        TypeVariableLabel(returnTypeVariable),
-                        returnTypeVariable.typeParameters
-                    )
-                }
-                typeVariable != null && isImplicitReceiver ->
-                    BoundTypeImpl(
-                        TypeVariableLabel(typeVariable),
+            is TypeParameterDescriptor -> {
+                val containingDeclaration = target.containingDeclaration
+                when {
+                    containingDeclaration == call?.candidateDescriptor -> {
+                        val returnTypeVariable = inferenceContext.typeElementToTypeVariable[
+                                call.call.typeArguments.getOrNull(target.index)?.typeReference?.typeElement ?: return null
+                        ] ?: return null
+                        BoundTypeImpl(
+                            TypeVariableLabel(returnTypeVariable),
+                            returnTypeVariable.typeParameters
+                        )
+                    }
+                    typeVariable != null && isImplicitReceiver ->
+                        BoundTypeImpl(
+                            TypeVariableLabel(typeVariable),
+                            emptyList()
+                        )
+                    contextBoundType?.isReferenceToClass == true ->
+                        contextBoundType.typeParameters.getOrNull(target.index)?.boundType
+                    containingDeclaration == call?.candidateDescriptor.safeAs<ConstructorDescriptor>()?.constructedClass -> {
+                        val returnTypeVariable = inferenceContext.typeElementToTypeVariable[
+                                call?.call?.typeArguments?.getOrNull(target.index)?.typeReference?.typeElement ?: return null
+                        ] ?: return null
+                        BoundTypeImpl(
+                            TypeVariableLabel(returnTypeVariable),
+                            returnTypeVariable.typeParameters
+                        )
+                    }
+                    else -> BoundTypeImpl(
+                        TypeParameterLabel(target),
                         emptyList()
                     )
-                contextBoundType != null ->
-                    contextBoundType.typeParameters[target.index].boundType
-                containingDeclaration == call?.candidateDescriptor.safeAs<ConstructorDescriptor>()?.constructedClass -> {
-                    val returnTypeVariable = inferenceContext.typeElementToTypeVariable[
-                            call!!.call.typeArguments[target.index].typeReference?.typeElement
-                    ]!!
-                    BoundTypeImpl(
-                        TypeVariableLabel(returnTypeVariable),
-                        returnTypeVariable.typeParameters
-                    )
                 }
-                else -> BoundTypeImpl(
-                    TypeParameterLabel(target),
-                    emptyList()
-                )
             }
+            else -> null
         }
-        else -> TODO(toString())
     }
 }
 

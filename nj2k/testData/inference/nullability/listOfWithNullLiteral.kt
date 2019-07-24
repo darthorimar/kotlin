@@ -1,5 +1,5 @@
 fun test() {
-    val x: /*T2@*/List</*T1@*/Int> = listOf</*T0@*/Int>(1/*LIT*/, null/*NULL!!U*/, 3/*LIT*/)/*List<T0@Int>!!L*/
+    val x: /*T2@*/List</*T1@*/Int?> = listOf</*T0@*/Int?>(1/*LIT*/, null/*NULL!!U*/, 3/*LIT*/)/*List<T0@Int>!!L*/
 }
 
 //LOWER <: T0 due to 'PARAMETER'

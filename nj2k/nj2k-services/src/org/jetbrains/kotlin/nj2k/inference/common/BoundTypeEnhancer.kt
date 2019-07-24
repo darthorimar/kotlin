@@ -18,6 +18,7 @@ abstract class BoundTypeEnhancer {
     abstract fun enhanceKotlinType(
         type: KotlinType,
         boundType: BoundType,
+        allowLowerEnhancemnt: Boolean,
         inferenceContext: InferenceContext
     ): BoundType
 
@@ -31,6 +32,7 @@ abstract class BoundTypeEnhancer {
         override fun enhanceKotlinType(
             type: KotlinType,
             boundType: BoundType,
+            allowLowerEnhancemnt: Boolean,
             inferenceContext: InferenceContext
         ): BoundType = boundType
     }

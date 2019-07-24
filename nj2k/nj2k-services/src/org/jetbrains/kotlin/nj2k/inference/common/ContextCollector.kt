@@ -11,7 +11,6 @@ import org.jetbrains.kotlin.idea.caches.resolve.analyze
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
 import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
 import org.jetbrains.kotlin.psi.*
-import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.forEachDescendantOfType
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.callUtil.getType
@@ -42,19 +41,24 @@ abstract class ContextCollector(private val resolutionFacade: ResolutionFacade) 
     fun collectTypeVariables(elements: List<KtElement>): InferenceContext {
         val declarationToTypeVariable = mutableMapOf<KtNamedDeclaration, TypeVariable>()
         val typeElementToTypeVariable = mutableMapOf<KtTypeElement, TypeVariable>()
-        fun KtTypeReference.toBoundType(): BoundType? {
+        val typeBasedTypeVariables = mutableListOf<TypeBasedTypeVariable>()
+
+        fun KtTypeReference.toBoundType(defaultState: State? = null): BoundType? {
             val typeElement = typeElement ?: return null
             val classReference = classReference() ?: NoClassReference
-            if (classReference.descriptor?.defaultType?.isUnit() == true) return null
 
-            val state = classReference.getState(typeElement)
+            val state = when {
+                classReference.descriptor?.defaultType?.isUnit() == true -> State.LOWER
+                defaultState != null -> defaultState
+                else -> classReference.getState(typeElement)
+            }
             val typeArguments =
                 if (classReference is DescriptorClassReference) {
                     typeElement.typeArgumentsAsTypes.zip(classReference.descriptor.declaredTypeParameters) { typeArgument, typeParameter ->
                         TypeParameter(
                             if (typeArgument == null) {
-                                BoundTypeImpl(StarProjectionlLabel, emptyList())
-                            } else typeArgument.toBoundType()!!,
+                                BoundTypeImpl(StarProjectionLabel, emptyList())
+                            } else typeArgument.toBoundType() ?: BoundType.STAR_PROJECTION,
                             typeParameter.variance
                         )
                     }
@@ -85,7 +89,7 @@ abstract class ContextCollector(private val resolutionFacade: ResolutionFacade) 
                 if (classReference is DescriptorClassReference) {
                     arguments.zip(classReference.descriptor.declaredTypeParameters) { typeArgument, typeParameter ->
                         TypeParameter(
-                            typeArgument.type.toBoundType()!!,
+                            typeArgument.type.toBoundType() ?: BoundType.STAR_PROJECTION,
                             typeParameter.variance
                         )
                     }
@@ -103,6 +107,7 @@ abstract class ContextCollector(private val resolutionFacade: ResolutionFacade) 
                     this,
                     state
                 )
+                typeBasedTypeVariables += typeVariable
                 typeVariable.asBoundType()
             }
         }
@@ -115,10 +120,19 @@ abstract class ContextCollector(private val resolutionFacade: ResolutionFacade) 
                     && (expression is KtParameter
                             || expression is KtProperty
                             || expression is KtNamedFunction)
-                ) {
-                    val typeReference = expression.typeReference ?: return@forEachDescendantOfType
-                    val typeVariable = typeReference.toBoundType()?.typeVariable ?: return@forEachDescendantOfType
+                ) run {
+                    val typeReference = expression.typeReference ?: return@run
+                    val typeVariable = typeReference.toBoundType()?.typeVariable ?: return@run
                     declarationToTypeVariable[expression] = typeVariable
+                }
+
+                if (expression is KtTypeParameterListOwner) {
+                    for (typeParameter in expression.typeParameters) {
+                        typeParameter.extendsBound?.toBoundType(defaultState = State.UPPER)
+                    }
+                    for (constraint in expression.typeConstraints) {
+                        constraint.boundTypeReference?.toBoundType(defaultState = State.UPPER)
+                    }
                 }
 
                 when (expression) {
@@ -163,13 +177,15 @@ abstract class ContextCollector(private val resolutionFacade: ResolutionFacade) 
         }
 
         val typeVariables =
-            (typeElementToTypeVariable.values + declarationToTypeVariable.values).distinct()
+            (typeElementToTypeVariable.values + declarationToTypeVariable.values + typeBasedTypeVariables).distinct()
         return InferenceContext(
             elements,
             typeVariables,
             typeElementToTypeVariable,
             declarationToTypeVariable,
-            declarationToTypeVariable.mapKeys { (key, _) -> key.resolveToDescriptorIfAny(resolutionFacade)!! },
+            declarationToTypeVariable.mapNotNull { (key, value) ->
+                key.resolveToDescriptorIfAny(resolutionFacade)?.let { it to value }
+            }.toMap(),
             substitutors
         )
     }

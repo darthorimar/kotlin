@@ -5,4 +5,5 @@ fun test() {
 
 //T0 <: T1 due to 'INITIALIZER'
 //LOWER <: T2 due to 'INITIALIZER'
+//T1 <: T1 due to 'RECEIVER_PARAMETER'
 //T2 := LOWER due to 'USE_AS_RECEIVER'

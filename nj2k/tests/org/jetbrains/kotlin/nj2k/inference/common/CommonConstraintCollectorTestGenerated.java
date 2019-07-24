@@ -34,6 +34,11 @@ public class CommonConstraintCollectorTestGenerated extends AbstractCommonConstr
         runTest("nj2k/testData/inference/common/arrayAssignment.kt");
     }
 
+    @TestMetadata("arrayOfArrays.kt")
+    public void testArrayOfArrays() throws Exception {
+        runTest("nj2k/testData/inference/common/arrayOfArrays.kt");
+    }
+
     @TestMetadata("callFunctionWithTypeParamFromOuterScope.kt")
     public void testCallFunctionWithTypeParamFromOuterScope() throws Exception {
         runTest("nj2k/testData/inference/common/callFunctionWithTypeParamFromOuterScope.kt");
@@ -99,6 +104,11 @@ public class CommonConstraintCollectorTestGenerated extends AbstractCommonConstr
         runTest("nj2k/testData/inference/common/lambdaImplicitReturn.kt");
     }
 
+    @TestMetadata("lambdaReturn.kt")
+    public void testLambdaReturn() throws Exception {
+        runTest("nj2k/testData/inference/common/lambdaReturn.kt");
+    }
+
     @TestMetadata("listAssignment.kt")
     public void testListAssignment() throws Exception {
         runTest("nj2k/testData/inference/common/listAssignment.kt");
@@ -129,9 +139,24 @@ public class CommonConstraintCollectorTestGenerated extends AbstractCommonConstr
         runTest("nj2k/testData/inference/common/returnFromLambda.kt");
     }
 
+    @TestMetadata("sequenceOfCalls.kt")
+    public void testSequenceOfCalls() throws Exception {
+        runTest("nj2k/testData/inference/common/sequenceOfCalls.kt");
+    }
+
+    @TestMetadata("sequenceOfCallsWIthLambda.kt")
+    public void testSequenceOfCallsWIthLambda() throws Exception {
+        runTest("nj2k/testData/inference/common/sequenceOfCallsWIthLambda.kt");
+    }
+
     @TestMetadata("simpleAssignment.kt")
     public void testSimpleAssignment() throws Exception {
         runTest("nj2k/testData/inference/common/simpleAssignment.kt");
+    }
+
+    @TestMetadata("superCall.kt")
+    public void testSuperCall() throws Exception {
+        runTest("nj2k/testData/inference/common/superCall.kt");
     }
 
     @TestMetadata("superConstuctorCall.kt")
@@ -152,6 +177,11 @@ public class CommonConstraintCollectorTestGenerated extends AbstractCommonConstr
     @TestMetadata("superFunctionType.kt")
     public void testSuperFunctionType() throws Exception {
         runTest("nj2k/testData/inference/common/superFunctionType.kt");
+    }
+
+    @TestMetadata("typeParamsBounds.kt")
+    public void testTypeParamsBounds() throws Exception {
+        runTest("nj2k/testData/inference/common/typeParamsBounds.kt");
     }
 
     @TestMetadata("varargsInCall.kt")

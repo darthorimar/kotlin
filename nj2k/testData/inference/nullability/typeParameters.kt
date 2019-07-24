@@ -13,6 +13,8 @@ fun foo() {
 //T1 <: T3 due to 'INITIALIZER'
 //T2 <: T4 due to 'INITIALIZER'
 //LOWER <: T5 due to 'INITIALIZER'
+//T3 <: T3 due to 'RECEIVER_PARAMETER'
+//T4 <: T4 due to 'RECEIVER_PARAMETER'
 //T5 := LOWER due to 'USE_AS_RECEIVER'
 //T3 <: T6 due to 'INITIALIZER'
 //T4 <: T7 due to 'INITIALIZER'

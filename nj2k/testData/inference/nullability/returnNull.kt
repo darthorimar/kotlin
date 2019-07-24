@@ -1,4 +1,4 @@
-fun nya() : /*T0@*/Int {
+fun nya() : /*T0@*/Int? {
     return null/*NULL!!U*/
 }
 

@@ -7,7 +7,6 @@ package org.jetbrains.kotlin.nj2k.inference.nullability
 
 import org.jetbrains.kotlin.idea.intentions.branchedTransformations.isNullExpression
 import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
-import org.jetbrains.kotlin.nj2k.NewJ2kConverterContext
 import org.jetbrains.kotlin.nj2k.inference.common.*
 import org.jetbrains.kotlin.nj2k.inference.common.collectors.ConstraintsCollector
 import org.jetbrains.kotlin.psi.*
@@ -16,6 +15,7 @@ class NullabilityConstraintsCollector : ConstraintsCollector() {
     override fun ConstraintBuilder.collectConstraints(
         element: KtElement,
         boundTypeCalculator: BoundTypeCalculator,
+        inferenceContext: InferenceContext,
         resolutionFacade: ResolutionFacade
     ) = with(boundTypeCalculator) {
         when {

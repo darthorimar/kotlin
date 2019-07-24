@@ -28,6 +28,7 @@ class NullabilityContextCollector(
             ?.hasUndefinedNullabilityLabel(converterContext)
             ?: false
         return when {
+            typeElement == null -> State.UNKNOWN
             hasUndefinedNullabilityLabel -> State.UNKNOWN
             typeElement is KtNullableType -> State.UPPER
             else -> State.LOWER

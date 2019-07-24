@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.nj2k.inference.common.collectors
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
+import org.jetbrains.kotlin.descriptors.ParameterDescriptor
 import org.jetbrains.kotlin.idea.caches.resolve.analyze
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToCall
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
@@ -28,6 +29,7 @@ class CommonConstraintsCollector : ConstraintsCollector() {
     override fun ConstraintBuilder.collectConstraints(
         element: KtElement,
         boundTypeCalculator: BoundTypeCalculator,
+        inferenceContext: InferenceContext,
         resolutionFacade: ResolutionFacade
     ) = with(boundTypeCalculator) {
         when {
@@ -97,16 +99,29 @@ class CommonConstraintsCollector : ConstraintsCollector() {
 
             element is KtCallElement -> {
                 val call = element.resolveToCall(resolutionFacade) ?: return
-                if (call.candidateDescriptor !is FunctionDescriptor) return
+                val originalDescriptor = call.candidateDescriptor.safeAs<FunctionDescriptor>()?.original ?: return
                 val valueArguments = call.valueArgumentsByIndex.orEmpty()
                 val typeParameterBindings =
                     call.candidateDescriptor.typeParameters.zip(call.call.typeArguments) { typeParameter, typeArgument ->
                         typeArgument.typeReference?.typeElement?.let {
                             inferenceContext.typeElementToTypeVariable[it]
                         }?.let { typeVariable ->
-                            typeParameter!! to typeVariable
+                            typeParameter?.let { it to typeVariable }
                         }
                     }.mapNotNull { it }.toMap()
+
+                val receiverExpressionBoundType = element.getQualifiedExpressionForSelector()
+                    ?.receiverExpression
+                    ?.boundType(inferenceContext)
+
+                fun KotlinType.contextBoundType() = boundType(
+                    typeVariable = null,
+                    contextBoundType = receiverExpressionBoundType,
+                    call = call,
+                    isImplicitReceiver = false,
+                    forceEnhance = false,
+                    inferenceContext = inferenceContext
+                )
 
                 fun BoundType.substituteTypeParameters(): BoundType =
                     BoundTypeImpl(
@@ -131,22 +146,24 @@ class CommonConstraintsCollector : ConstraintsCollector() {
                         }
                     ).withEnhancementFrom(this)
 
-                val argumentToParameters = call.candidateDescriptor.valueParameters.let { parameters ->
+                fun ParameterDescriptor.boundType() =
+                    inferenceContext.declarationDescriptorToTypeVariable[this]
+                        ?.asBoundType()
+                        ?.substituteTypeParameters()
+                        ?: original.type.contextBoundType()
+
+
+                if (receiverExpressionBoundType != null) run {
+                    val receiverBoundType =
+                        (originalDescriptor.extensionReceiverParameter ?: originalDescriptor.dispatchReceiverParameter)?.boundType() ?: return@run
+                    receiverExpressionBoundType.isSubtypeOf(receiverBoundType, ConstraintPriority.RECEIVER_PARAMETER)
+                }
+
+
+                val parameterToArgument = call.candidateDescriptor.valueParameters.let { parameters ->
                     valueArguments.mapIndexed { i, arguments ->
                         val parameter = parameters[i]
-                        val parameterBoundType =
-                            inferenceContext.declarationDescriptorToTypeVariable[parameter]
-                                ?.asBoundType()
-                                ?.substituteTypeParameters()
-                                ?: parameter.original.type.boundType(
-                                    null,
-                                    element.getQualifiedExpressionForSelector()
-                                        ?.receiverExpression
-                                        ?.boundType(inferenceContext),
-                                    call,
-                                    false,
-                                    inferenceContext
-                                )
+                        val parameterBoundType = parameter.boundType()
 
                         val parameterBoundTypeConsideringVararg =
                             if (parameter.isVararg && KotlinBuiltIns.isArrayOrPrimitiveArray(parameter.type)) {
@@ -161,7 +178,7 @@ class CommonConstraintsCollector : ConstraintsCollector() {
                         }
                     }
                 }.flatten()
-                for ((parameter, argument) in argumentToParameters) {
+                for ((parameter, argument) in parameterToArgument) {
                     val argumentExpression = argument.getArgumentExpression() ?: continue
                     argumentExpression.isSubtypeOf(parameter, ConstraintPriority.PARAMETER)
                 }
@@ -176,8 +193,10 @@ class CommonConstraintsCollector : ConstraintsCollector() {
                     val loopRangeBoundType = element.loopRange?.boundType(inferenceContext) ?: return
                     val boundType =
                         element.loopRangeElementType(resolutionFacade)
-                            ?.boundType(null, loopRangeBoundType, null, false, inferenceContext)
-                            ?: return
+                            ?.boundType(
+                                contextBoundType = loopRangeBoundType,
+                                inferenceContext = inferenceContext
+                            ) ?: return
                     loopParameterTypeVariable.isSubtypeOf(
                         boundType.typeParameters.firstOrNull()?.boundType ?: return,
                         ConstraintPriority.ASSIGNMENT

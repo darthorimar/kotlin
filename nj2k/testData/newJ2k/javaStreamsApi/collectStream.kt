@@ -1,11 +1,13 @@
+import java.util.stream.Collectors
+
 internal class Test {
     fun main(lst: List<String>) {
-        val toList = lst.asSequence().toList()
-        val toSet = lst.asSequence().toSet()
-        val count = lst.asSequence().count().toLong()
-        val anyMatch = lst.asSequence().any { v: String -> v.isEmpty() }
-        val allMatch = lst.asSequence().all { v: String -> v.isEmpty() }
-        val noneMatch = lst.asSequence().none { v: String -> v.isEmpty() }
-        lst.asSequence().forEach { v: String -> println(v) }
+        val toList: List<String> = lst.stream().collect(Collectors.toList())
+        val toSet: Set<String> = lst.stream().collect(Collectors.toSet())
+        val count = lst.stream().count()
+        val anyMatch = lst.stream().anyMatch { v: String -> v.isEmpty() }
+        val allMatch = lst.stream().allMatch { v: String -> v.isEmpty() }
+        val noneMatch = lst.stream().noneMatch { v: String -> v.isEmpty() }
+        lst.stream().forEach { v: String -> println(v) }
     }
 }

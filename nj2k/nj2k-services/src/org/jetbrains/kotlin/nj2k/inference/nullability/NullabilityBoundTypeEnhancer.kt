@@ -13,10 +13,7 @@ import org.jetbrains.kotlin.idea.references.mainReference
 import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
 import org.jetbrains.kotlin.idea.resolve.frontendService
 import org.jetbrains.kotlin.nj2k.inference.common.*
-import org.jetbrains.kotlin.psi.KtCallExpression
-import org.jetbrains.kotlin.psi.KtExpression
-import org.jetbrains.kotlin.psi.KtLambdaExpression
-import org.jetbrains.kotlin.psi.KtQualifiedExpression
+import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.callUtil.getType
 import org.jetbrains.kotlin.resolve.calls.smartcasts.DataFlowInfo
@@ -39,11 +36,9 @@ class NullabilityBoundTypeEnhancer(private val resolutionFacade: ResolutionFacad
                 WithForcedStateBoundType(boundType, State.UPPER)
             expression is KtCallExpression -> enhanceCallExpression(expression, boundType, inferenceContext)
             expression is KtQualifiedExpression && expression.selectorExpression is KtCallExpression ->
-                enhanceCallExpression(
-                    expression.selectorExpression as KtCallExpression,
-                    boundType,
-                    inferenceContext
-                )
+                enhanceCallExpression(expression.selectorExpression as KtCallExpression, boundType, inferenceContext)
+            expression is KtNameReferenceExpression ->
+                boundType.enhanceWith(expression.smartCastEnhancement())
             expression is KtLambdaExpression ->
                 WithForcedStateBoundType(boundType, State.LOWER)
             else -> boundType
@@ -61,44 +56,56 @@ class NullabilityBoundTypeEnhancer(private val resolutionFacade: ResolutionFacad
 
         val resolved = expression.calleeExpression?.mainReference?.resolve() ?: return boundType
         if (inferenceContext.isInConversionScope(resolved)) return boundType
-        return expression.getExternallyAnnotatedForcedState()?.let { forcedState ->
-            WithForcedStateBoundType(boundType, forcedState)
-        } ?: boundType
+        return boundType.enhanceWith(expression.getExternallyAnnotatedForcedState())
     }
 
-    override fun enhanceKotlinType(type: KotlinType, boundType: BoundType, inferenceContext: InferenceContext): BoundType {
+    override fun enhanceKotlinType(
+        type: KotlinType,
+        boundType: BoundType,
+        allowLowerEnhancemnt: Boolean,
+        inferenceContext: InferenceContext
+    ): BoundType {
         if (type.arguments.size != boundType.typeParameters.size) return boundType
         val inner = BoundTypeImpl(
             boundType.label,
             boundType.typeParameters.zip(type.arguments) { typeParameter, typeArgument ->
                 TypeParameter(
-                    enhanceKotlinType(typeArgument.type, typeParameter.boundType, inferenceContext),
+                    enhanceKotlinType(
+                        typeArgument.type,
+                        typeParameter.boundType,
+                        allowLowerEnhancemnt,
+                        inferenceContext
+                    ),
                     typeParameter.variance
                 )
             }
         )
-        return if (type.isMarkedNullable) {
-            WithForcedStateBoundType(
-                inner,
-                State.UPPER
-            )
-        } else inner
+        val enhancement = when {
+            type.isMarkedNullable -> State.UPPER
+            allowLowerEnhancemnt -> State.LOWER
+            else -> null
+        }
+        return inner.enhanceWith(enhancement)
     }
 
-    private fun KtExpression.getExternallyAnnotatedForcedState(): State? {
-        val bindingContext = analyze()
-        val type = this.getType(bindingContext) ?: return null
-        if (!type.isNullable()) return State.LOWER
+    private fun KtReferenceExpression.smartCastEnhancement() = analyzeExpressionUponTheTypeInfo { dataFlowValue, dataFlowInfo, _ ->
+        if (dataFlowInfo.completeNullabilityInfo.get(dataFlowValue)?.getOrNull() == Nullability.NOT_NULL) State.LOWER
+        else null
+    }
+
+    private inline fun KtExpression.analyzeExpressionUponTheTypeInfo(analyzer: (DataFlowValue, DataFlowInfo, KotlinType) -> State?): State? {
+        val bindingContext = analyze(resolutionFacade)
+        val type = getType(bindingContext) ?: return null
 
         val dataFlowValue = resolutionFacade.frontendService<DataFlowValueFactory>()
-            .createDataFlowValue(
-                this,
-                type,
-                bindingContext,
-                resolutionFacade.moduleDescriptor
-            )
-        val dataFlowInfo = analyze(resolutionFacade)[BindingContext.EXPRESSION_TYPE_INFO, this]?.dataFlowInfo ?: return null
-        return when {
+            .createDataFlowValue(this, type, bindingContext, resolutionFacade.moduleDescriptor)
+        val dataFlowInfo = bindingContext[BindingContext.EXPRESSION_TYPE_INFO, this]?.dataFlowInfo ?: return null
+        return analyzer(dataFlowValue, dataFlowInfo, type)
+    }
+
+    private fun KtExpression.getExternallyAnnotatedForcedState() = analyzeExpressionUponTheTypeInfo { dataFlowValue, dataFlowInfo, type ->
+        if (!type.isNullable()) return@analyzeExpressionUponTheTypeInfo State.LOWER
+        when {
             dataFlowInfo.completeNullabilityInfo.get(dataFlowValue)?.getOrNull() == Nullability.NOT_NULL -> State.LOWER
             type.isExternallyAnnotatedNotNull(dataFlowInfo, dataFlowValue) -> State.LOWER
             else -> null

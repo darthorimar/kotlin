@@ -11,12 +11,12 @@ import org.jetbrains.kotlin.nj2k.tree.impl.JKKtLiteralExpressionImpl
 import org.jetbrains.kotlin.nj2k.tree.impl.JKTypeArgumentListImpl
 import java.math.BigInteger
 
-class RemoveTypeArgumentsConversion : RecursiveApplicableConversionBase() {
+class RemoveCapturedTypeArgumentsForCallsConversion : RecursiveApplicableConversionBase() {
     override fun applyToElement(element: JKTreeElement): JKTreeElement {
-        if (element !is JKMethodCallExpression) return recurse(element)
-        if (element.isCallOf("java.util.stream.Stream.collect")) {
-            element.typeArgumentList = JKTypeArgumentListImpl()
-        }
+//        if (element !is JKMethodCallExpression) return recurse(element)
+//        if (element.isCallOf("java.util.stream.Stream.collect")) {
+//            element.typeArgumentList = JKTypeArgumentListImpl()
+//        }
         return recurse(element)
     }
 }

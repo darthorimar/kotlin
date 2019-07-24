@@ -726,7 +726,9 @@ class NewCodeBuilder(context: NewJ2kConverterContext) {
 
         override fun visitArrayAccessExpressionRaw(arrayAccessExpression: JKArrayAccessExpression) {
             arrayAccessExpression.expression.accept(this)
-            printer.par(ParenthesisKind.SQUARE) { arrayAccessExpression.indexExpression.accept(this) }
+            printer.print(".get(")
+            arrayAccessExpression.indexExpression.accept(this)
+            printer.print(")")
         }
 
         override fun visitPackageAccessExpressionRaw(packageAccessExpression: JKPackageAccessExpression) {
@@ -947,9 +949,7 @@ private class JKPrinter(
 
     fun renderType(type: JKType, owner: JKTreeElement?) {
         if (type is JKNoTypeImpl) return
-        elementInfoStorage.getOrCreateInfoForElement(type).let {
-            print(it.render())
-        }
+        print(elementInfoStorage.getOrCreateInfoForElement(type).render())
         when (type) {
             is JKClassType -> {
                 renderClassSymbol(type.classReference, owner)
@@ -974,6 +974,12 @@ private class JKPrinter(
             }
         }
         if (type.nullability == Nullability.Nullable) {
+            printWithNoIndent("?")
+        }
+        // we print undefined types as nullable because we need smartcast work in nullability inference in post-processing
+        if (type.nullability == Nullability.Default
+            && owner?.safeAs<JKLambdaExpression>()?.functionalType?.type != type
+        ) {
             printWithNoIndent("?")
         }
     }

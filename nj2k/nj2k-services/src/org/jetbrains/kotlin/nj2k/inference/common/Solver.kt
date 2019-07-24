@@ -5,16 +5,15 @@
 
 package org.jetbrains.kotlin.nj2k.inference.common
 
-
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 
-class Solver(
-    private val inferenceContext: InferenceContext,
+internal class Solver(
+    private val analysisContext: InferenceContext,
     private val printConstraints: Boolean
 ) {
-    private val printer = DebugPrinter(inferenceContext)
+    private val printer = DebugPrinter(analysisContext)
 
     private fun List<Constraint>.printDebugInfo(step: Int) =
         with(printer) {
@@ -25,7 +24,7 @@ class Solver(
                 }
                 println()
                 println("type variables:")
-                for (typeVariable in inferenceContext.typeVariables) {
+                for (typeVariable in analysisContext.typeVariables) {
                     println("${typeVariable.name} := ${typeVariable.state}")
                 }
                 println("---------------\n")
@@ -68,17 +67,10 @@ class Solver(
 
 
     private fun MutableList<Constraint>.cleanConstraints() {
-        val newConstraints =
-            distinct()
-                .filterNot { constraint ->
-                    constraint is SubtypeConstraint
-                            && constraint.subtype is LiteralBound
-                            && constraint.supertype is LiteralBound
-                }
-
-        if (newConstraints.size < size) {
-            clear()
-            addAll(newConstraints)
+        removeIf { constraint ->
+            constraint is SubtypeConstraint
+                    && constraint.subtype is LiteralBound
+                    && constraint.supertype is LiteralBound
         }
     }
 
@@ -87,10 +79,10 @@ class Solver(
         val nullableConstraints = getConstraintsWithNullableLowerBound(step)
         if (nullableConstraints.isNotEmpty()) {
             this -= nullableConstraints
-            for ((_, supertype) in nullableConstraints) {
-                if (supertype is TypeVariableBound) {
+            for ((_, upperBound) in nullableConstraints) {
+                if (upperBound is TypeVariableBound) {
                     somethingChanged = true
-                    supertype.typeVariable.setStateIfNotFixed(State.UPPER)
+                    upperBound.typeVariable.setStateIfNotFixed(State.UPPER)
                 }
             }
         }
@@ -102,22 +94,21 @@ class Solver(
         val nullableConstraints = getConstraintsWithNotNullUpperBound(step)
         if (nullableConstraints.isNotEmpty()) {
             this -= nullableConstraints
-            for ((subtype, _) in nullableConstraints) {
-                if (subtype is TypeVariableBound) {
+            for ((lowerBound, _) in nullableConstraints) {
+                if (lowerBound is TypeVariableBound) {
                     somethingChanged = true
-                    subtype.typeVariable.setStateIfNotFixed(State.LOWER)
+                    lowerBound.typeVariable.setStateIfNotFixed(State.LOWER)
                 }
             }
         }
         return somethingChanged
     }
 
-    private fun ConstraintBound.fixedState(): State? =
-        when {
-            this is LiteralBound -> stateLiteral
-            this is TypeVariableBound && typeVariable.isFixed -> typeVariable.state
-            else -> null
-        }
+    private fun ConstraintBound.fixedState(): State? = when {
+        this is LiteralBound -> state
+        this is TypeVariableBound && typeVariable.isFixed -> typeVariable.state
+        else -> null
+    }
 
     private fun MutableList<Constraint>.handleEqualsConstraints(step: ConstraintPriority): Boolean {
         var somethingChanged = false
@@ -151,11 +142,11 @@ class Solver(
                 val (lower, upper) = constraint
                 if (lower is TypeVariableBound && lower.typeVariable.isFixed) {
                     somethingChanged = true
-                    constraint.subtype = LiteralBound(lower.typeVariable.state)
+                    constraint.subtype = lower.typeVariable.state.constraintBound
                 }
                 if (upper is TypeVariableBound && upper.typeVariable.isFixed) {
                     somethingChanged = true
-                    constraint.supertype = LiteralBound(upper.typeVariable.state)
+                    constraint.supertype = upper.typeVariable.state.constraintBound
                 }
             }
         }
@@ -165,13 +156,13 @@ class Solver(
     private fun List<Constraint>.getConstraintsWithNullableLowerBound(priority: ConstraintPriority) =
         filterIsInstance<SubtypeConstraint>().filter { constraint ->
             constraint.priority <= priority
-                    && constraint.subtype.safeAs<LiteralBound>()?.stateLiteral == State.UPPER
+                    && constraint.subtype.safeAs<LiteralBound>()?.state == State.UPPER
         }
 
     private fun List<Constraint>.getConstraintsWithNotNullUpperBound(priority: ConstraintPriority) =
         filterIsInstance<SubtypeConstraint>().filter { constraint ->
             constraint.priority <= priority
-                    && constraint.supertype.safeAs<LiteralBound>()?.stateLiteral == State.LOWER
+                    && constraint.supertype.safeAs<LiteralBound>()?.state == State.LOWER
         }
 
 
@@ -184,6 +175,5 @@ class Solver(
                 .flatMap { sequenceOf(it.left, it.right) }
                 .firstIsInstanceOrNull<TypeVariableBound>()
                 ?.typeVariable
-
 }
 

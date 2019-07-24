@@ -26,7 +26,7 @@ class DebugPrinter(private val inferenceContext: InferenceContext) {
         is TypeVariableLabel -> typeVariable.name + "@" + typeVariable.classReference.asString()
         is TypeParameterLabel -> typeParameter.name.asString()
         is GenericLabel -> classReference.asString()
-        StarProjectionlLabel -> "*"
+        StarProjectionLabel -> "*"
         NullLiteralLabel -> "NULL"
         LiteralLabel -> "LIT"
     }
@@ -55,7 +55,7 @@ class DebugPrinter(private val inferenceContext: InferenceContext) {
 
 
     private fun ConstraintBound.asString(): String = when (this) {
-        is LiteralBound -> stateLiteral.toString()
+        is LiteralBound -> state.toString()
         is TypeVariableBound -> typeVariable.name
     }
 
