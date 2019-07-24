@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.nj2k.inference.common
 
 import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
 import org.jetbrains.kotlin.nj2k.inference.AbstractConstraintCollectorTest
+import org.jetbrains.kotlin.nj2k.inference.common.collectors.CallExpressionConstraintCollector
 import org.jetbrains.kotlin.nj2k.inference.common.collectors.CommonConstraintsCollector
 import org.jetbrains.kotlin.nj2k.inference.common.collectors.FunctionConstraintsCollector
 import org.jetbrains.kotlin.psi.KtTypeElement
@@ -22,6 +23,7 @@ abstract class AbstractCommonConstraintCollectorTest : AbstractConstraintCollect
                 resolutionFacade,
                 listOf(
                     CommonConstraintsCollector(),
+                    CallExpressionConstraintCollector(),
                     FunctionConstraintsCollector(ResolveSuperFunctionsProvider(resolutionFacade))
                 )
             ),

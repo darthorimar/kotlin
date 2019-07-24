@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.idea.core.util.range
 import org.jetbrains.kotlin.idea.formatter.commitAndUnblockDocument
 import org.jetbrains.kotlin.nj2k.asLabel
 import org.jetbrains.kotlin.nj2k.inference.common.*
+import org.jetbrains.kotlin.nj2k.inference.common.collectors.CallExpressionConstraintCollector
 import org.jetbrains.kotlin.nj2k.inference.common.collectors.CommonConstraintsCollector
 import org.jetbrains.kotlin.nj2k.inference.common.collectors.FunctionConstraintsCollector
 import org.jetbrains.kotlin.nj2k.inference.nullability.NullabilityBoundTypeEnhancer
@@ -50,6 +51,7 @@ val nullabilityProcessing =
                 resolutionFacade,
                 listOf(
                     CommonConstraintsCollector(),
+                    CallExpressionConstraintCollector(),
                     FunctionConstraintsCollector(ByInfoSuperFunctionsProvider(resolutionFacade, converterContext)),
                     NullabilityConstraintsCollector()
                 )
