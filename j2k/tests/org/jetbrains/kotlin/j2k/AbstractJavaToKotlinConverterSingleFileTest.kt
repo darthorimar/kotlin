@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.idea.j2k.J2kPostProcessor
 import org.jetbrains.kotlin.idea.test.KotlinWithJdkAndRuntimeLightProjectDescriptor
 import org.jetbrains.kotlin.idea.test.dumpTextWithErrors
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.resolve.jvm.diagnostics.ErrorsJvm
 import org.jetbrains.kotlin.test.KotlinTestUtils
 import java.io.File
 import java.util.regex.Pattern
@@ -73,7 +74,8 @@ abstract class AbstractJavaToKotlinConverterSingleFileTest : AbstractJavaToKotli
         var actual = reformat(rawConverted, project, reformatInFun)
 
         if (prefix == "file") {
-            actual = createKotlinFile(actual).dumpTextWithErrors()
+            actual = createKotlinFile(actual)
+                .dumpTextWithErrors(setOf(element = ErrorsJvm.INTERFACE_STATIC_METHOD_CALL_FROM_JAVA6_TARGET_ERROR))
         }
 
 

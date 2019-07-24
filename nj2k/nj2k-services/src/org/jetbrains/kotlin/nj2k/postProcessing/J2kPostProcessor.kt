@@ -161,6 +161,7 @@ private val removeRedundantElementsProcessingGroup =
         runSingleTime = true,
         processings = listOf(
             RemoveExplicitTypeArgumentsProcessing(),
+            RemoveJavaStreamsCollectCallTypeArgumentsProcessing(),
             generalInspectionBasedProcessing(RedundantCompanionReferenceInspection()),
             generalInspectionBasedProcessing(ExplicitThisInspection()),
             intentionBasedProcessing(RemoveEmptyClassBodyIntention())

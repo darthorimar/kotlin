@@ -20,6 +20,7 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.testFramework.LightPlatformTestCase
+import org.jetbrains.kotlin.diagnostics.DiagnosticFactory
 import org.jetbrains.kotlin.diagnostics.Severity
 import org.jetbrains.kotlin.diagnostics.rendering.DefaultErrorMessages
 import org.jetbrains.kotlin.idea.caches.project.LibraryModificationTracker
@@ -29,11 +30,13 @@ import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.test.InTextDirectivesUtils
 import java.util.*
 
-fun KtFile.dumpTextWithErrors(): String {
+fun KtFile.dumpTextWithErrors(ignoreErrors: Set<DiagnosticFactory<*>> = emptySet()): String {
     val text = text
     if (InTextDirectivesUtils.isDirectiveDefined(text, "// DISABLE-ERRORS")) return text
     val diagnostics = analyzeWithContent().diagnostics
-    val errors = diagnostics.filter { it.severity == Severity.ERROR }
+    val errors = diagnostics.filter { diagnostic ->
+        diagnostic.severity == Severity.ERROR && diagnostic.factory !in ignoreErrors
+    }
     if (errors.isEmpty()) return text
     val header = errors.joinToString("\n", postfix = "\n") { "// ERROR: " + DefaultErrorMessages.render(it).replace('\n', ' ') }
     return header + text

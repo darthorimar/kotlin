@@ -81,7 +81,6 @@ object ConversionsRunner {
             +MethodReferenceToLambdaConversion(context)
             +JavaStreamApiConversion(context)
             +BuiltinMembersConversion(context)
-            +RemoveCapturedTypeArgumentsForCallsConversion()
             +ImplicitCastsConversion(context)
             +LiteralConversion()
 

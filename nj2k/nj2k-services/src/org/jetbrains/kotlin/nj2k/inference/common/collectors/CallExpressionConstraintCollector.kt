@@ -43,11 +43,8 @@ class CallExpressionConstraintCollector : ConstraintsCollector() {
             ?.boundType(inferenceContext)
 
         fun KotlinType.contextBoundType() = boundType(
-            typeVariable = null,
             contextBoundType = receiverExpressionBoundType,
             call = call,
-            isImplicitReceiver = false,
-            forceEnhance = false,
             inferenceContext = inferenceContext
         )
 

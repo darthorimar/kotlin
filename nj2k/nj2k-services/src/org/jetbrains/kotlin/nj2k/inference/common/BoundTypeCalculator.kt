@@ -216,7 +216,7 @@ class BoundTypeCalculatorImpl(
             is TypeParameterDescriptor -> {
                 val containingDeclaration = target.containingDeclaration
                 when {
-                    containingDeclaration == call?.candidateDescriptor -> {
+                    containingDeclaration == call?.candidateDescriptor?.original -> {
                         val returnTypeVariable = inferenceContext.typeElementToTypeVariable[
                                 call.call.typeArguments.getOrNull(target.index)?.typeReference?.typeElement ?: return null
                         ] ?: return null
@@ -232,6 +232,8 @@ class BoundTypeCalculatorImpl(
                         )
                     contextBoundType?.isReferenceToClass == true ->
                         contextBoundType.typeParameters.getOrNull(target.index)?.boundType
+
+                    // this or super call case
                     containingDeclaration == call?.candidateDescriptor.safeAs<ConstructorDescriptor>()?.constructedClass -> {
                         val returnTypeVariable = inferenceContext.typeElementToTypeVariable[
                                 call?.call?.typeArguments?.getOrNull(target.index)?.typeReference?.typeElement ?: return null
