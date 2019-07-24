@@ -456,19 +456,8 @@ class BuiltinMembersConversion(private val context: NewJ2kConverterContext) : Re
         ).groupBy { it.from.fqName }
 
 
-    private fun JKExpression.callOn(symbol: JKMethodSymbol, arguments: List<JKArgument> = emptyList()) =
-        JKQualifiedExpressionImpl(
-            this,
-            JKKtQualifierImpl.DOT,
-            JKKtCallExpressionImpl(
-                symbol,
-                JKArgumentListImpl(arguments),
-                JKTypeArgumentListImpl()
-            )
-        )
-
-    private fun JKExpression.callOn(symbol: JKMethodSymbol, vararg arguments: JKArgument) =
-        callOn(symbol, arguments.toList())
+    private fun JKExpression.callOn(symbol: JKMethodSymbol) =
+        callOn(symbol, emptyList())
 
     private fun JKExpression.callOn(symbol: JKMethodSymbol, vararg arguments: JKExpression) =
         callOn(symbol, arguments.map { JKArgumentImpl(it) })
@@ -488,5 +477,5 @@ class BuiltinMembersConversion(private val context: NewJ2kConverterContext) : Re
 
 
     private fun JKExpression.castToTypedArray() =
-        callOn(context.symbolProvider.provideMethodSymbol("kotlin.collections.toTypedArray"))
+        callOn(context.symbolProvider.provideMethodSymbol("kotlin.collections.toTypedArray"), arguments = emptyList())
 }
