@@ -149,6 +149,11 @@ public class NewJavaToKotlinCopyPasteConversionTestGenerated extends AbstractNew
         runTest("nj2k/testData/copyPaste/InsertIntoString.java");
     }
 
+    @TestMetadata("KT-15633.java")
+    public void testKT_15633() throws Exception {
+        runTest("nj2k/testData/copyPaste/KT-15633.java");
+    }
+
     @TestMetadata("MethodDeclarationWithNoBody.java")
     public void testMethodDeclarationWithNoBody() throws Exception {
         runTest("nj2k/testData/copyPaste/MethodDeclarationWithNoBody.java");

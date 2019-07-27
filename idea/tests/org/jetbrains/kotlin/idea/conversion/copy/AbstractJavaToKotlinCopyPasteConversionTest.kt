@@ -40,7 +40,7 @@ abstract class AbstractJavaToKotlinCopyPasteConversionTest : AbstractJ2kCopyPast
     fun doTest(path: String) {
         myFixture.testDataPath = BASE_PATH
         val testName = getTestName(false)
-        myFixture.configureByFiles(testName + ".java")
+        myFixture.configureByFile(path)
 
         val fileText = myFixture.editor.document.text
         val noConversionExpected = InTextDirectivesUtils.findListWithPrefixes(fileText, "// NO_CONVERSION_EXPECTED").isNotEmpty()

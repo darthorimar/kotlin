@@ -205,6 +205,11 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
             runTest("nj2k/testData/newJ2k/arrayAccessExpression/intIndex.java");
         }
 
+        @TestMetadata("kt-26056.java")
+        public void testKt_26056() throws Exception {
+            runTest("nj2k/testData/newJ2k/arrayAccessExpression/kt-26056.java");
+        }
+
         @TestMetadata("variableIndex.java")
         public void testVariableIndex() throws Exception {
             runTest("nj2k/testData/newJ2k/arrayAccessExpression/variableIndex.java");
@@ -425,6 +430,11 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         @TestMetadata("divideAssign.java")
         public void testDivideAssign() throws Exception {
             runTest("nj2k/testData/newJ2k/assignmentExpression/divideAssign.java");
+        }
+
+        @TestMetadata("kt-19573.java")
+        public void testKt_19573() throws Exception {
+            runTest("nj2k/testData/newJ2k/assignmentExpression/kt-19573.java");
         }
 
         @TestMetadata("minusAssign.java")
@@ -2719,6 +2729,11 @@ public class NewJavaToKotlinConverterSingleFileTestGenerated extends AbstractNew
         @TestMetadata("kt-19327.java")
         public void testKt_19327() throws Exception {
             runTest("nj2k/testData/newJ2k/issues/kt-19327.java");
+        }
+
+        @TestMetadata("kt-19333.java")
+        public void testKt_19333() throws Exception {
+            runTest("nj2k/testData/newJ2k/issues/kt-19333.java");
         }
 
         @TestMetadata("kt-19336.java")
